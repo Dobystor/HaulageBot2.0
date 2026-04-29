@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SF Haulage Bot - Premium</title>
+    <link rel="stylesheet" href="styles.css?v=3">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="bg-gradient"></div>
+    
+    <div class="app-container">
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sf-logo">SF</div>
+                <div class="sf-brand">NETWORK</div>
+            </div>
+            
+            <nav class="node-list" id="serverTabs">
+                <!-- Node tabs here -->
+            </nav>
+            
+            <button class="add-node-btn" onclick="addServer()">
+                <span>+</span> NUEVO NODO
+            </button>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="main-view">
+            <header class="main-header">
+                <div class="title-zone">
+                    <input type="text" id="currentServerName" class="editable-title" value="CARGANDO..." onblur="renameCurrentBot(this)">
+                    <p class="subtitle">CONTROL CENTRAL DE ACARREOS</p>
+                </div>
+                <div class="header-status">
+                    <div class="status-item">
+                        <label>MODO</label>
+                        <span id="statusBadge" class="status-val">OFFLINE</span>
+                    </div>
+                    <div class="status-item">
+                        <label>COMBOS</label>
+                        <span id="comboCount" class="status-val">0</span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="dashboard-grid">
+                <!-- CONFIGURATION -->
+                <div class="glass-panel config-panel">
+                    <div class="panel-section">
+                        <div class="field-group">
+                            <label>DIRECCIÓN IP / HOST</label>
+                            <input type="text" id="serverIp" placeholder="ej: dispatch-01-sf.smartflow.com.mx" class="glass-input">
+                        </div>
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label>PESO MIN (t)</label>
+                                <input type="number" id="minWeight" value="20" class="glass-input">
+                            </div>
+                            <div class="input-group">
+                                <label>PESO MAX (t)</label>
+                                <input type="number" id="maxWeight" value="40" class="glass-input">
+                            </div>
+                        </div>
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label>INTERVALO MIN (min)</label>
+                                <input type="number" id="minInterval" value="3" class="glass-input">
+                            </div>
+                            <div class="input-group">
+                                <label>INTERVALO MAX (min)</label>
+                                <input type="number" id="maxInterval" value="8" class="glass-input">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel-actions">
+                        <button class="btn btn-primary" id="saveBtn" onclick="saveConfig()">APLICAR CAMBIOS</button>
+                        <div class="btn-group-row">
+                            <button id="toggleBtn" class="btn btn-outline" onclick="toggleBot()">INICIAR AUTO</button>
+                            <button class="btn btn-outline" onclick="triggerManual()">INSTANTÁNEO</button>
+                        </div>
+                        <button class="btn btn-danger" id="deleteBotBtn" onclick="deleteCurrentBot()">ELIMINAR ESTE NODO</button>
+                    </div>
+                </div>
+
+                <!-- MONITORING & FILTERS -->
+                <div class="right-stack">
+                    <div class="glass-panel terminal-panel">
+                        <div class="terminal-header">
+                            <span>REGISTRO DE EVENTOS</span>
+                            <div class="terminal-dots"><span></span><span></span><span></span></div>
+                        </div>
+                        <div class="terminal-body" id="consoleLogs">
+                            <!-- Logs -->
+                        </div>
+                    </div>
+
+                    <div class="glass-panel filters-panel">
+                        <div class="filter-tabs">
+                            <div class="filter-col">
+                                <div class="select-header">
+                                    <label>RUTAS</label>
+                                    <button class="btn-tiny" onclick="selectAll('selectRoutes')">TODAS</button>
+                                </div>
+                                <select id="selectRoutes" multiple class="glass-select"></select>
+                            </div>
+                            <div class="filter-col">
+                                <div class="select-header">
+                                    <label>EMPLEADOS</label>
+                                    <button class="btn-tiny" onclick="selectAll('selectEmployees')">TODOS</button>
+                                </div>
+                                <select id="selectEmployees" multiple class="glass-select"></select>
+                            </div>
+                            <div class="filter-col">
+                                <div class="select-header">
+                                    <label>VEHÍCULOS</label>
+                                    <button class="btn-tiny" onclick="selectAll('selectVehicles')">TODOS</button>
+                                </div>
+                                <select id="selectVehicles" multiple class="glass-select"></select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel import-panel">
+                        <div class="import-info">
+                            <label>IMPORTACIÓN MASIVA</label>
+                            <p>Sube archivos Excel (.xlsx) para registros históricos.</p>
+                        </div>
+                        <div class="import-btns">
+                            <button class="btn btn-link" onclick="window.location.href='/api/template'">PLANTILLA</button>
+                            <input type="file" id="fileUpload" accept=".xlsx" style="display:none;" onchange="uploadFile()">
+                            <button class="btn btn-primary-small" onclick="document.getElementById('fileUpload').click()">SUBIR ARCHIVO</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js?v=3"></script>
+</body>
+</html>

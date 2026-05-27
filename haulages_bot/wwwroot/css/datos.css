@@ -1,0 +1,135 @@
+/* Estilos generales */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: #f7f7f7;
+}
+
+/*.hidden {
+    display: none;
+}*/
+
+.content {
+    margin-top: 120px; /* Ajusta este valor según la altura de la barra de navegación */
+}
+
+/* Nuevo contenedor principal con márgenes y relleno */
+.main-container {
+    margin-top: 120px; /* Ajusta este valor según la altura de la barra de navegación */
+    width: 100%; /* Ajusta el ancho según tus necesidades */
+    max-width: 1100px; /* Ancho máximo para grandes pantallas */
+    margin: 20px auto; /* Márgenes superior/inferior y centrar horizontalmente */
+    padding: 20px; /* Relleno interno para separar el contenido de los bordes */
+    background-color: #ffffff; /* Fondo blanco para el contenedor */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Sombra para el contenedor */
+    border-radius: 0px; /* Bordes redondeados */
+}
+
+/* Asegura que el calendario tenga márgenes */
+#calendar {
+    margin-bottom: 20px; /* Márgenes inferior para separar del siguiente elemento */
+    padding: 10px; /* Relleno interno */
+    border: 1px solid #ddd; /* Borde ligero para destacar el calendario */
+    border-radius: 4px; /* Bordes redondeados */
+}
+
+/* Ajuste para el contenedor de la tabla (lista) */
+#gridContainer {
+    margin-top: 20px; /* Márgenes superior para separar del calendario */
+    padding: 10px; /* Relleno interno */
+    border: 1px solid #ddd; /* Borde ligero para la lista */
+    border-radius: 4px; /* Bordes redondeados */
+}
+
+/* Estilo general para el input file */
+input[type="file"] {
+    width: auto; /* Ajusta el ancho del input al contenido */
+    padding: 8px; /* Espacio interno */
+    border: 1px solid #1e88e5; /* Borde azul claro */
+    border-radius: 4px; /* Bordes redondeados */
+    font-size: 16px; /* Tamaño de la fuente */
+    color: #333; /* Color del texto */
+    background-color: #e3f2fd; /* Fondo azul claro */
+    cursor: pointer; /* Cambia el cursor a mano cuando pasa por encima */
+    display: inline-block; /* Permite que el input se comporte como un bloque en línea */
+    margin: 0; /* Elimina márgenes predeterminados que puedan afectar la alineación */
+}
+
+    /* Cambia el color de fondo y borde cuando el input está enfocado */
+    input[type="file"]:focus {
+        border-color: #1976d2; /* Borde azul más oscuro cuando está enfocado */
+        background-color: #bbdefb; /* Fondo azul más claro cuando está enfocado */
+        outline: none; /* Elimina el borde de enfoque predeterminado */
+    }
+
+/* Estilo del botón */
+button#boton {
+    background-color: #4caf50; /* Color de fondo verde */
+    border: none; /* Sin borde */
+    border-radius: 4px; /* Bordes redondeados */
+    color: white; /* Color del texto */
+    padding: 10px 20px; /* Espacio interno del botón */
+    font-size: 16px; /* Tamaño de la fuente */
+    cursor: pointer; /* Cambia el cursor a mano cuando pasa por encima */
+    transition: background-color 0.3s ease; /* Transición suave para el cambio de color */
+    margin-top: 10px; /* Margen superior para separación del input */
+}
+
+    /* Estilo para el botón al pasar el mouse por encima */
+    button#boton:hover {
+        background-color: #45a049; /* Color verde más oscuro al pasar el mouse */
+    }
+
+    /* Estilo para el botón al estar enfocado */
+    button#boton:focus {
+        outline: none; /* Elimina el borde de enfoque predeterminado */
+        box-shadow: 0 0 5px rgba(0, 0, 0, 0.2); /* Añade una sombra sutil al estar enfocado */
+    }
+
+/* Responsividad para pantallas pequeñas */
+@media (max-width: 600px) {
+    .main-container {
+        width: 90%; /* Ancho más amplio en pantallas pequeñas */
+        padding: 15px; /* Relleno reducido */
+    }
+
+    .form-container {
+        flex-direction: column; /* Cambia a una columna en pantallas pequeñas */
+        align-items: stretch; /* Estira el contenido para ocupar el ancho completo */
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr; /* Una sola columna en pantallas pequeñas */
+    }
+
+    button#boton {
+        width: 100%; /* El botón ocupa el ancho completo en pantallas pequeñas */
+    }
+}
+
+.loading-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    color: white;
+    z-index: 2000;
+}
+
+    .loading-screen .spinner-border {
+        width: 3rem;
+        height: 3rem;
+        margin-bottom: 10px;
+    }
+
+

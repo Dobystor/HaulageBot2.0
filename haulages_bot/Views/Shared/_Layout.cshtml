@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html class="dark" lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewBag.Title - Smartflow Multi-Bot</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    
+    <!-- Google Fonts & Material Symbols -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+
+    <!-- Bootstrap 5 CSS (for modal functionality) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    
+    <!-- Flatpickr Date Picker -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css" />
+
+    <style>
+        body {
+            background-color: #060913 !important;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(188, 52, 250, 0.08) 0%, rgba(5, 7, 12, 0) 40%),
+                radial-gradient(circle at 90% 80%, rgba(0, 240, 255, 0.06) 0%, rgba(5, 7, 12, 0) 50%) !important;
+            color: #f8fafc !important;
+            font-family: 'Outfit', sans-serif !important;
+        }
+
+        /* Glassmorphic Cyber Cards */
+        .cyber-card {
+            background: rgba(13, 20, 35, 0.65) !important;
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .cyber-card:hover {
+            border-color: rgba(0, 240, 255, 0.3) !important;
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.08);
+        }
+
+        .cyber-glow-primary {
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+        }
+
+        .cyber-glow-magenta {
+            box-shadow: 0 0 15px rgba(255, 0, 85, 0.4);
+        }
+
+        .terminal-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .terminal-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .terminal-scroll::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        /* Loading Screen Refresh styling */
+        .loading-screen-refresh {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(6, 9, 19, 0.95);
+            z-index: 9999;
+            display: flex;
+        }
+
+        /* Adjust bootstrap modals to work with Tailwind and look cyber-premium */
+        .modal-content {
+            background-color: rgba(13, 20, 35, 0.9) !important;
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(0, 240, 255, 0.25) !important;
+            color: #f8fafc !important;
+            box-shadow: 0 0 30px rgba(0, 240, 255, 0.15) !important;
+        }
+        .modal-header {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+        }
+        .modal-footer {
+            border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+        }
+        .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+        
+        .timer-badge {
+            background: rgba(0, 240, 255, 0.04);
+            border: 1px solid rgba(0, 240, 255, 0.12);
+            border-radius: 20px;
+        }
+
+        /* Font styles for neons */
+        .font-cyber-title {
+            font-family: 'Orbitron', sans-serif;
+            letter-spacing: 1px;
+        }
+    </style>
+
+    <!-- jQuery, Bootstrap, and SignalR JS -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/5.0.7/signalr.min.js"></script>
+</head>
+<body class="overflow-hidden">
+
+    <!-- Notification Toast Container -->
+    <div id="notification-container" style="position: fixed; top: 80px; right: 20px; z-index: 1050; max-width: 350px;"></div>
+
+    <!-- Notification Sound -->
+    <audio id="notification-sound" src="/audio/NotificationExample.mp3" preload="auto"></audio>
+
+    <!-- Top Navigation Bar -->
+    <header class="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-8 h-16 border-b border-white/5 shadow-[0_0_15px_rgba(0,240,255,0.03)]" style="background: rgba(13, 20, 35, 0.85); backdrop-filter: blur(16px);">
+        <div class="flex items-center gap-10">
+            <h1 class="text-lg font-black tracking-widest text-[#00f0ff] uppercase font-cyber-title" style="text-shadow: 0 0 8px rgba(0, 240, 255, 0.3);">SMARTFLOW MULTI-BOT</h1>
+        </div>
+
+        <div class="flex items-center gap-6">
+            <!-- Next run countdown timer widget -->
+            <div id="navbar-timer-widget" class="flex items-center px-4 py-1.5 timer-badge text-[12px] font-mono gap-2 text-white">
+                <span class="material-symbols-outlined text-[#00f0ff] text-[18px]">schedule</span>
+                <span class="text-slate-400">Próxima:</span>
+                <span id="navNextRunText" class="font-bold text-white">--:--:--</span>
+                <span id="navCountdownText" class="px-2.5 py-0.5 bg-[#00f0ff]/15 text-[#00f0ff] border border-[#00f0ff]/30 font-bold rounded-full text-[10px] uppercase">Desactivado</span>
+            </div>
+
+            <div class="h-8 w-[1px] bg-white/10 mx-1"></div>
+            
+            <span class="font-cyber-title text-[11px] text-white font-bold tracking-wider">
+                @Context.Request.Cookies["Username"]
+            </span>
+            
+            <form asp-controller="Authentication" asp-action="Logout" method="post" id="logoutForm" style="display:none;"></form>
+            <button onclick="document.getElementById('logoutForm').submit(); return false;" class="text-slate-400 hover:text-red-500 transition-colors flex items-center" title="Cerrar Sesión">
+                <span class="material-symbols-outlined text-[20px]">logout</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Side Navigation Bar -->
+    <aside class="fixed left-0 top-16 h-[calc(100vh-64px)] w-64 border-r border-white/5 flex flex-col pt-8 pb-4" style="background: rgba(13, 20, 35, 0.85); backdrop-filter: blur(16px);">
+        <nav class="flex-1 space-y-1">
+            <div class="px-6 mb-4">
+                <p class="font-cyber-title text-[10px] text-slate-500 font-bold tracking-widest mb-4">CONTROLES PRINCIPALES</p>
+                <a class="flex items-center gap-3 px-4 py-3 font-cyber-title text-[12px] font-bold tracking-wider uppercase transition-all rounded-r-lg @(ViewContext.RouteData.Values["action"]?.ToString() == "gene" ? "bg-[#00f0ff]/10 text-[#00f0ff] border-l-4 border-[#00f0ff]" : "text-[#94a3b8] hover:bg-white/5 hover:text-white")" href="~/Home/gene">
+                    <span class="material-symbols-outlined text-[20px]">smart_toy</span>
+                    Bot Acarreos
+                </a>
+            </div>
+            <div class="px-6 space-y-1">
+                <a class="flex items-center gap-3 px-4 py-3 font-cyber-title text-[12px] font-bold tracking-wider uppercase transition-all rounded-lg @(ViewContext.RouteData.Values["action"]?.ToString() == "servers" ? "bg-[#00f0ff]/10 text-[#00f0ff] border-l-4 border-[#00f0ff]" : "text-[#94a3b8] hover:bg-white/5 hover:text-white")" href="~/Home/servers">
+                    <span class="material-symbols-outlined text-[20px]">dns</span>
+                    Servidores
+                </a>
+                <a class="flex items-center gap-3 px-4 py-3 font-cyber-title text-[12px] font-bold tracking-wider uppercase transition-all rounded-lg @(ViewContext.RouteData.Values["action"]?.ToString() == "Logs" ? "bg-[#00f0ff]/10 text-[#00f0ff] border-l-4 border-[#00f0ff]" : "text-[#94a3b8] hover:bg-white/5 hover:text-white")" href="~/Home/Logs">
+                    <span class="material-symbols-outlined text-[20px]">receipt_long</span>
+                    System Logs
+                </a>
+            </div>
+        </nav>
+
+        <div class="px-6 mb-6">
+            <button onclick="location.href='/Home/servers?add=true'" class="w-full py-3 bg-[#00f0ff] text-slate-950 font-cyber-title text-[11px] font-bold rounded-md flex items-center justify-center gap-2 cyber-glow-primary hover:scale-[0.98] transition-all">
+                <span class="material-symbols-outlined text-[18px]">add</span>
+                ADD SERVER
+            </button>
+        </div>
+
+        <!-- Terminal Section Integrated in Sidebar Bottom (Shows Active Server logs) -->
+        <div class="mt-auto px-4">
+            <div class="bg-black/60 border border-white/10 rounded-lg p-3 h-48 flex flex-col">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="font-cyber-title text-[10px] text-[#ff0055] font-bold tracking-wider" id="sidebarTerminalTitle">LOGS: ACTIVE</span>
+                    <button class="text-[10px] text-slate-500 hover:text-red-500 transition-colors" onclick="clearSidebarTerminal()">Limpiar</button>
+                </div>
+                <div class="flex-1 font-mono text-[11px] overflow-y-auto terminal-scroll p-2 bg-black/40 rounded border border-white/5 text-[#f8fafc]" id="sidebarTerminalLog">
+                    <p class="mb-1 text-slate-500">[Sistema] Listo. Selecciona un servidor para ver sus logs en tiempo real.</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content Stage -->
+    <main class="ml-64 mt-16 p-8 h-[calc(100vh-64px)] overflow-y-auto bg-transparent">
+        @RenderBody()
+    </main>
+
+    <!-- Screen overlay for processing/loading -->
+    <div id="loading-screen-refresh" class="loading-screen-refresh flex-col items-center justify-center" style="display: none;">
+        <!-- Barra de progreso superior -->
+        <div class="w-full h-1 bg-white/5 absolute top-0">
+            <div class="h-full bg-[#00f0ff] animate-[pulse_1.5s_infinite]" style="width: 100%;"></div>
+        </div>
+        <!-- Spinner en el centro -->
+        <div class="spinner-border text-[#00f0ff] mt-4" role="status" style="width: 3rem; height: 3rem;">
+            <span class="visually-hidden">Cargando...</span>
+        </div>
+        <p class="text-[#00f0ff] font-cyber-title text-[12px] font-bold tracking-widest mt-4">CARGANDO RECURSOS...</p>
+    </div>
+
+    <!-- Scripts setup and dynamic functions -->
+    <script>
+        $(document).ready(function () {
+            // Ocultar loading screen al terminar de cargar
+            $('#loading-screen-refresh').fadeOut(500);
+
+            // Actualizar nombre de servidor activo en la cabecera
+            updateHeaderServerName();
+
+            // Escuchar notificaciones del localStorage
+            window.addEventListener('storage', function(e) {
+                if (e.key === 'activeServerName') {
+                    updateHeaderServerName();
+                }
+            });
+        });
+
+        function updateHeaderServerName() {
+            var activeName = localStorage.getItem('activeServerName') || "Sin Seleccionar";
+            $('#sidebarTerminalTitle').text("LOGS: " + activeName.toUpperCase());
+        }
+
+        // Limpiar terminal de la barra lateral
+        function clearSidebarTerminal() {
+            $('#sidebarTerminalLog').html('<p class="mb-1 text-slate-600 font-mono">[Terminal Limpia]</p>');
+        }
+
+        // Agregar log a la terminal lateral
+        function appendSidebarTerminal(message, isError) {
+            const container = $('#sidebarTerminalLog');
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString();
+            const textClass = isError ? 'text-red-500 font-bold' : 'text-slate-300';
+
+            const line = `<p class="mb-1 ${textClass}">[${timeStr}] ${message}</p>`;
+            container.append(line);
+
+            // Auto-scroll to bottom
+            container.scrollTop(container[0].scrollHeight);
+            
+            // Limit output lines
+            const lines = container.find('p');
+            if (lines.length > 50) {
+                lines.first().remove();
+            }
+        }
+
+        // Registrar para recibir logs de la terminal lateral
+        window.addEventListener("ServerNotification", function(e) {
+            const payload = e.detail;
+            if (!payload) return;
+
+            const activeServerId = localStorage.getItem('activeServerId');
+            if (typeof payload === 'object') {
+                const sId = payload.serverId || payload.ServerId;
+                const message = payload.message || payload.Message;
+                const isError = payload.error || payload.Error;
+
+                if (sId == activeServerId) {
+                    appendSidebarTerminal(message, isError);
+                }
+            } else if (typeof payload === 'string') {
+                appendSidebarTerminal(payload, false);
+            }
+        });
+    </script>
+
+    <!-- Flatpickr JS -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/es.js"></script>
+
+    <!-- Custom layout execution and SignalR -->
+    <script src="~/js/layout.js"></script>
+
+    @RenderSection("Scripts", required: false)
+</body>
+</html>

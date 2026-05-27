@@ -1,0 +1,81 @@
+﻿@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Importacion Demo</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <!-- Exceljs to export datagrids -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-polyfill/7.4.0/polyfill.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.1.1/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.2/FileSaver.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.0.0/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.9/jspdf.plugin.autotable.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.5/jszip.min.js"></script>
+
+
+    <!-- DevExtreme Quill (required by the HtmlEditor UI component) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/devextreme-quill/~1.5.18/dx-quill.min.js"></script>
+
+    <!-- DevExtreme library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/devextreme/21.2.15/js/dx.all.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js" integrity="sha512-UnrKxsCMN9hFk7M56t4I4ckB4N/2HHi0w/7+B/1JsXIX3DmyBcsGpT3/BsuZMZf+6mAr0vP81syWtfynHJ69JA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="stylesheet" type="text/css" href="https://cdn3.devexpress.com/jslib/23.2.6/css/dx.material.blue.light.css" />
+
+
+
+    <link rel="stylesheet" type="text/css" href="~/css/datos.css"> <!-- Archivo CSS -->
+
+
+</head>
+<body>
+
+    <div class="main-container">
+        
+        <h1 class="text-center">Importacion de historicos</h1>
+        @*import section*@
+        @*<div>
+        <form method="post" enctype="multipart/form-data" class="width-100 margin-bottom-10">
+        <div class="input-file-container">
+        <input type="file" name="fileTest" value="file" id="fileTest" required accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+        <label tabindex="0" for="fileTest"> </label>
+        </div>
+        </form>
+        </div>
+        <div>
+        <button type="submit" id="boton"><span>Guardar</span></button>
+        </div>*@
+
+        <div class="form-grid">
+            <form method="post" enctype="multipart/form-data" class="width-100 margin-bottom-10">
+                <div class="input-file-container">
+                    <input type="file" name="fileTest" value="file" id="fileTest" required accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+                    <label tabindex="0" for="fileTest"> </label>
+                </div>
+            </form>
+            <button type="submit" id="boton"><span>Guardar</span></button>
+        </div>
+
+        <div id="gridContainer"></div>
+
+    </div>
+
+    <!-- Pantalla de carga -->
+    <div id="loading-screen" class="loading-screen d-none">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden"></span>
+        </div>
+        <p>Procesando importacion, por favor espera...</p>
+    </div>
+
+    <script src="~/js/datos.js"></script>
+</body>
+</html>
+

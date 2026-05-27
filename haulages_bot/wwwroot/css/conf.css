@@ -1,0 +1,118 @@
+/* Estilos generales */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: #f7f7f7;  
+}
+
+/*.demo-container {*/
+    /*display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    min-height: calc(180vh - 200px);*/
+    /*padding-top: 40px;*/ /**/ /* Margen superior para separar del contenido superior */
+
+    /*display: grid;
+    gap: 20px;
+    width: 100%;*/ /*Ajustamos el ancho del formulario*/
+    /*max-width: 1100px;*/ /* Ancho máximo del contenedor principal */
+    /*margin: 0 auto;
+    padding: 20px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);*/ /*Sombra */
+    /*border-radius: 0px;*/ /* Bordes redondeados */
+    /*background-color: #fff;
+}*/
+
+/* Contenedor principal */
+.main-content {
+    /*width: 100%;*/ /*Ancho general */
+    /*max-width: 1200px;*/ /*Ancho máximo */
+    /*margin: 0 auto;*/ /* Centra el contenedor */
+    /*padding: 20px;*/ /*Espaciado interno */
+    padding-top: 40px; /**/ /* Margen superior para separar del contenido superior */
+
+    display: grid;
+    gap: 20px;
+    width: 100%; /*Ajustamos el ancho del formulario*/
+    max-width: 1100px; /* Ancho máximo para grandes pantallas */
+    margin: 20px auto;
+    padding: 20px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); /*Sombra */
+    border-radius: 0px; /* Bordes redondeados */
+    background-color: #ffffff; /* Fondo blanco para el contenedor */
+}
+
+.content {
+    margin-top: 100px; /* Ajusta este valor según la altura de la barra de navegación */
+}
+
+/*  título */
+.column-header {
+    font-weight: bold; /* Negrita */
+    color: #333; /* Color del texto */
+    text-align: center; /* Centra el texto */
+    font-size: 24px; /* Tamaño de fuente del título */
+    /*margin-top: -200px;*/ /* Espacio hacia arriba para separar del contenido superior */
+    margin-bottom: 20px; /* Espacio hacia abajo para separar del contenido inferior */
+}
+
+.grid-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Dos columnas iguales */
+    grid-template-rows: auto; /* Las filas se ajustarán automáticamente */
+    gap: 10px; /* Espacio entre los elementos */
+
+    /*display: flex;
+    align-items: center;*/
+}
+
+.btn-conf {
+    margin-top: 20px;
+}
+
+.text-cell {
+    margin-top: 20px;
+}
+
+/* Si quieres aplicarlo directamente al ID #button2 */
+#button2 {
+    background-color: green; /* Color de fondo verde */
+    color: white; /* Texto en color blanco */
+    padding: 10px 20px; /* Espaciado interno */
+    cursor: pointer;
+    border-radius: 5px; /* Bordes redondeados */
+}
+
+/* Ícono de información */
+.info-icon {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    background-color: #007bff;
+    color: #fff;
+    text-align: center;
+    border-radius: 50%;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-left: 10px;
+    position: relative;
+}
+
+    .info-icon::after {
+        content: '?';
+        display: block;
+        line-height: 20px;
+    }
+
+
+
+/* Espaciado entre campos */
+.text-cell {
+    margin-top: 20px;
+}

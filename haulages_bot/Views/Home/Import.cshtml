@@ -1,0 +1,48 @@
+﻿@{
+    ViewData["Title"] = "Import Data";
+
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h1>Import Data</h1>
+
+<form asp-controller="Import" asp-action="Upload" method="post" enctype="multipart/form-data">
+    <div>
+        <label for="file">Choose Excel file:</label>
+        <input type="file" id="file" name="file" accept=".xlsx" />
+    </div>
+    <button type="submit">Upload</button>
+    /*funcion ajax*/
+    //<div>
+        //    <form id="uploadForm" enctype="multipart/form-data">
+            //        <input type="file" name="file" id="file" required accept=".xlsx">
+            //        <button type="submit">Importar</button>
+            //
+        </form>
+        //
+    </div>
+
+@*     //<script>
+             $(document).ready(function () {
+                 $('#uploadForm').on('submit', function (e) {
+                     e.preventDefault();
+                     var formData = new FormData(this);
+
+                     $.ajax({
+                         type: 'POST',
+                         url: '/api/import/ImportarExcel',
+                         data: formData,
+                         contentType: false,
+                         processData: false,
+                         success: function (response) {
+                             alert(response);
+                         },
+                         error: function (error) {
+                             alert('Error: ' + error.responseText);
+                         }
+                     });
+                 });
+             });
+      </script> *@
+
+</form>

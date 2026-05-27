@@ -1,0 +1,596 @@
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewBag.Title = "Bot de Acarreos";
+}
+
+<!-- Custom Styles for Page Components -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.2/font/bootstrap-icons.css" />
+<link rel="stylesheet" href="~/css/gene.css" asp-append-version="true" />
+
+<style>
+    /* Styling overrides for active items */
+    .checkbox-item input[type="checkbox"]:checked + label {
+        color: #00f2ff !important;
+        text-shadow: 0 0 5px rgba(0, 242, 255, 0.4);
+    }
+    .font-cyber-title {
+        font-family: 'Orbitron', sans-serif;
+    }
+    
+    /* Inputs matching high readability */
+    .cyber-input {
+        background: rgba(0, 0, 0, 0.5) !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        color: #ffffff !important;
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    .cyber-input:focus {
+        border-color: #00f0ff !important;
+        box-shadow: 0 0 8px rgba(0, 240, 255, 0.3) !important;
+        outline: none !important;
+    }
+
+    /* Remove native spinners in number inputs to prevent overlap with unit suffix */
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    input[type="number"] {
+        -moz-appearance: textfield;
+    }
+
+    /* Fix Flatpickr generated altInput padding so it doesn't overlap the absolute positioned icon */
+    .date-input-wrapper input {
+        padding-left: 2.5rem !important;
+    }
+
+    /* Custom premium dark/neon Flatpickr style overrides */
+    .flatpickr-calendar {
+        background: #0b111e !important;
+        border: 1px solid rgba(0, 240, 255, 0.25) !important;
+        box-shadow: 0 0 20px rgba(0, 240, 255, 0.2) !important;
+        border-radius: 8px !important;
+        font-family: 'Outfit', sans-serif !important;
+    }
+    .flatpickr-calendar.arrowTop:before {
+        border-bottom-color: rgba(0, 240, 255, 0.25) !important;
+    }
+    .flatpickr-calendar.arrowTop:after {
+        border-bottom-color: #0b111e !important;
+    }
+    .flatpickr-months {
+        background: transparent !important;
+    }
+    .flatpickr-month {
+        color: #ffffff !important;
+    }
+    .flatpickr-current-month .numInputWrapper span.arrowUp:after {
+        border-bottom-color: #ffffff !important;
+    }
+    .flatpickr-current-month .numInputWrapper span.arrowDown:after {
+        border-top-color: #ffffff !important;
+    }
+    .flatpickr-weekday {
+        color: rgba(0, 240, 255, 0.7) !important;
+        font-weight: 600 !important;
+    }
+    .flatpickr-day {
+        color: #e2e8f0 !important;
+        border-radius: 6px !important;
+        transition: all 0.2s ease !important;
+    }
+    .flatpickr-day.today {
+        border-color: #bc34fa !important;
+        color: #bc34fa !important;
+    }
+    .flatpickr-day:hover, .flatpickr-day.prevMonthDay:hover, .flatpickr-day.nextMonthDay:hover {
+        background: rgba(0, 240, 255, 0.1) !important;
+        color: #00f0ff !important;
+        border-color: transparent !important;
+    }
+    .flatpickr-day.selected, .flatpickr-day.selected:hover {
+        background: #00f0ff !important;
+        color: #0d121f !important;
+        font-weight: bold !important;
+        box-shadow: 0 0 10px rgba(0, 240, 255, 0.4) !important;
+        border-color: #00f0ff !important;
+    }
+    .flatpickr-time {
+        border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+        background: #0b111e !important;
+    }
+    .flatpickr-time input {
+        color: #ffffff !important;
+        font-family: 'JetBrains Mono', monospace !important;
+    }
+    .flatpickr-time .numInputWrapper span.arrowUp:after {
+        border-bottom-color: #ffffff !important;
+    }
+    .flatpickr-time .numInputWrapper span.arrowDown:after {
+        border-top-color: #ffffff !important;
+    }
+    .flatpickr-time input:hover, .flatpickr-time input:focus {
+        background: rgba(255, 255, 255, 0.05) !important;
+    }
+    .flatpickr-time .flatpickr-am-pm {
+        color: #ffffff !important;
+    }
+
+    /* Server Tabs Styles Overrides for Ultra Premium look */
+    .server-tabs-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 24px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        padding-bottom: 16px;
+    }
+    
+    .server-tab {
+        background: rgba(13, 20, 35, 0.6) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 8px !important;
+        padding: 10px 20px !important;
+        color: #94a3b8 !important;
+        cursor: pointer;
+        font-family: 'Orbitron', sans-serif !important;
+        font-weight: 700 !important;
+        font-size: 0.85rem !important;
+        letter-spacing: 0.5px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .server-tab:hover {
+        background: rgba(0, 240, 255, 0.05) !important;
+        border-color: rgba(0, 240, 255, 0.4) !important;
+        color: #ffffff !important;
+        box-shadow: 0 0 12px rgba(0, 240, 255, 0.15) !important;
+        transform: translateY(-1px);
+    }
+    
+    .server-tab.active {
+        background: rgba(0, 240, 255, 0.1) !important;
+        border-color: #00f0ff !important;
+        color: #00f0ff !important;
+        box-shadow: 0 0 18px rgba(0, 240, 255, 0.25) !important;
+        text-shadow: 0 0 5px rgba(0, 240, 255, 0.5);
+    }
+    
+    .server-tab.active::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background: #00f0ff;
+        box-shadow: 0 0 10px #00f0ff;
+    }
+    
+    .server-tab.add-tab {
+        background: rgba(57, 255, 20, 0.02) !important;
+        border: 1px dashed rgba(57, 255, 20, 0.3) !important;
+        color: #39ff14 !important;
+    }
+    
+    .server-tab.add-tab:hover {
+        background: rgba(57, 255, 20, 0.08) !important;
+        border-color: #39ff14 !important;
+        color: #39ff14 !important;
+        box-shadow: 0 0 15px rgba(57, 255, 20, 0.3) !important;
+        transform: translateY(-1px);
+    }
+</style>
+
+<div class="container-fluid">
+    
+    <!-- No Servers Warning -->
+    <div class="row d-none" id="noServersWarning">
+        <div class="col-12 text-center py-5">
+            <div class="cyber-card rounded-lg p-8 inline-block max-w-lg">
+                <span class="material-symbols-outlined text-[#ff0055] text-5xl mb-3 block" style="text-shadow: 0 0 10px rgba(255, 0, 85, 0.4);">warning</span>
+                <h3 class="font-cyber-title text-lg font-bold text-white mb-2">Sin Servidores Configurados</h3>
+                <p class="text-slate-300 mt-3 mb-6">Para iniciar, agrega un servidor de SmartFlow registrando su dirección IP o FQDN y tus credenciales de inicio de sesión.</p>
+                <button class="px-6 py-2.5 bg-[#00f0ff] text-slate-950 font-cyber-title text-[11px] font-bold rounded-md cyber-glow-primary hover:scale-[0.98] transition-transform" onclick="openAddServerModal()">
+                    <span class="material-symbols-outlined mr-1">dns</span> Agregar Primer Servidor
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard Workspace -->
+    <div id="dashboardWorkspace" class="grid grid-cols-12 gap-gutter d-none">
+        
+        <!-- Left Side: Config & Bulk Forms -->
+        <div class="col-span-12 lg:col-span-8 space-y-gutter">
+            
+            <!-- Server Tabs (Dynamic Server Switcher) -->
+            <div class="server-tabs-container mb-4" id="serverTabs">
+                <button class="server-tab add-tab" onclick="openAddServerModal()">
+                    <span class="material-symbols-outlined">add_circle</span> Agregar Servidor
+                </button>
+            </div>
+
+            <!-- Configuration Section -->
+            <div class="cyber-card rounded-lg p-6">
+                <div class="flex items-center gap-2 mb-6">
+                    <span class="material-symbols-outlined text-[#bc34fa] text-[24px]">settings_input_component</span>
+                    <h3 class="font-cyber-title text-base font-bold text-[#bc34fa] tracking-wider uppercase" style="text-shadow: 0 0 5px rgba(188, 52, 250, 0.3);">Configuración de Acarreos</h3>
+                </div>
+
+                <form id="botConfigForm">
+                    <div class="grid grid-cols-4 gap-4 mb-8">
+                        <div>
+                            <label class="font-cyber-title text-[10px] text-slate-400 font-bold block mb-2">PORCENTAJE MÍNIMO</label>
+                            <div class="relative">
+                                <input class="w-full cyber-input px-3 py-2 pr-8 rounded" type="number" id="tonnageMin" value="80" required>
+                                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-slate-400 font-mono">%</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="font-cyber-title text-[10px] text-slate-400 font-bold block mb-2">PORCENTAJE MÁXIMO</label>
+                            <div class="relative">
+                                <input class="w-full cyber-input px-3 py-2 pr-8 rounded" type="number" id="tonnageMax" value="110" required>
+                                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-slate-400 font-mono">%</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="font-cyber-title text-[10px] text-slate-400 font-bold block mb-2">TIEMPO MÍN (MIN)</label>
+                            <input class="w-full cyber-input px-3 py-2 rounded" type="number" id="timeMin" value="5" min="1" required>
+                        </div>
+                        <div>
+                            <label class="font-cyber-title text-[10px] text-slate-400 font-bold block mb-2">TIEMPO MÁX (MIN)</label>
+                            <input class="w-full cyber-input px-3 py-2 rounded" type="number" id="timeMax" value="15" min="1" required>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-6">
+                        <!-- Selection Panels -->
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-end">
+                                <label class="font-cyber-title text-[11px] text-[#00f0ff] font-bold">RUTAS ACTIVAS</label>
+                                <div class="flex gap-2">
+                                    <button type="button" class="text-[9px] text-[#00f0ff] underline font-bold" onclick="toggleSelectAll('routesList', true)">Todos</button>
+                                    <button type="button" class="text-[9px] text-slate-400 underline" onclick="toggleSelectAll('routesList', false)">Ninguno</button>
+                                </div>
+                            </div>
+                            <input type="text" class="w-full cyber-input text-[11px] px-3 py-1.5 rounded" placeholder="Filtrar rutas..." id="searchRoutes">
+                            <div class="bg-black/40 border border-white/10 rounded-lg h-40 overflow-y-auto terminal-scroll p-2 space-y-1" id="routesList">
+                                <span class="text-slate-500 text-xs">Cargando rutas...</span>
+                            </div>
+                            <div class="text-slate-400 font-mono text-[10px] mt-1 text-right font-bold" id="routesCounter">
+                                0 de 0 seleccionados
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-end">
+                                <label class="font-cyber-title text-[11px] text-[#00f0ff] font-bold">OPERADORES ACTIVOS</label>
+                                <div class="flex gap-2">
+                                    <button type="button" class="text-[9px] text-[#00f0ff] underline font-bold" onclick="toggleSelectAll('employeesList', true)">Todos</button>
+                                    <button type="button" class="text-[9px] text-slate-400 underline" onclick="toggleSelectAll('employeesList', false)">Ninguno</button>
+                                </div>
+                            </div>
+                            <input type="text" class="w-full cyber-input text-[11px] px-3 py-1.5 rounded" placeholder="Filtrar operadores..." id="searchEmployees">
+                            <div class="bg-black/40 border border-white/10 rounded-lg h-40 overflow-y-auto terminal-scroll p-2 space-y-1" id="employeesList">
+                                <span class="text-slate-500 text-xs">Cargando operadores...</span>
+                            </div>
+                            <div class="text-slate-400 font-mono text-[10px] mt-1 text-right font-bold" id="employeesCounter">
+                                0 de 0 seleccionados
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-end">
+                                <label class="font-cyber-title text-[11px] text-[#00f0ff] font-bold">VEHÍCULOS ACTIVOS</label>
+                                <div class="flex gap-2">
+                                    <button type="button" class="text-[9px] text-[#00f0ff] underline font-bold" onclick="toggleSelectAll('vehiclesList', true)">Todos</button>
+                                    <button type="button" class="text-[9px] text-slate-400 underline" onclick="toggleSelectAll('vehiclesList', false)">Ninguno</button>
+                                </div>
+                            </div>
+                            <input type="text" class="w-full cyber-input text-[11px] px-3 py-1.5 rounded" placeholder="Filtrar vehículos..." id="searchVehicles">
+                            <div class="bg-black/40 border border-white/10 rounded-lg h-40 overflow-y-auto terminal-scroll p-2 space-y-1" id="vehiclesList">
+                                <span class="text-slate-500 text-xs">Cargando vehículos...</span>
+                            </div>
+                            <div class="text-slate-400 font-mono text-[10px] mt-1 text-right font-bold" id="vehiclesCounter">
+                                0 de 0 seleccionados
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-8 flex justify-end">
+                        <button type="submit" class="px-8 py-3 bg-[#bc34fa]/15 border border-[#bc34fa]/50 text-[#bc34fa] hover:bg-[#bc34fa] hover:text-white font-cyber-title text-[12px] font-bold rounded-md transition-all">
+                            <span class="material-symbols-outlined text-[18px]">save</span>
+                            GUARDAR CONFIGURACIÓN
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Bulk Generation Form -->
+            <div class="cyber-card rounded-lg p-6">
+                <div class="flex items-center gap-2 mb-6">
+                    <span class="material-symbols-outlined text-[#ff0055] text-[24px]">date_range</span>
+                    <h3 class="font-cyber-title text-base font-bold text-[#ff0055] tracking-wider uppercase" style="text-shadow: 0 0 5px rgba(255, 0, 85, 0.3);">GENERACIÓN MASIVA REALISTA</h3>
+                </div>
+
+                <form id="bulkGenerateForm">
+                    <div class="grid grid-cols-3 gap-6">
+                        <div>
+                            <label class="font-cyber-title text-[10px] text-slate-400 font-bold block mb-2">FECHA DE INICIO</label>
+                            <div class="relative date-input-wrapper">
+                                <input class="w-full cyber-input px-3 py-2 pl-10 rounded" id="bulkStartDate" placeholder="Selecciona fecha y hora" type="text" required readonly style="cursor:pointer">
+                                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">calendar_today</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="font-cyber-title text-[10px] text-slate-400 font-bold block mb-2">FECHA DE FIN</label>
+                            <div class="relative date-input-wrapper">
+                                <input class="w-full cyber-input px-3 py-2 pl-10 rounded" id="bulkEndDate" placeholder="Selecciona fecha y hora" type="text" required readonly style="cursor:pointer">
+                                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">event</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="font-cyber-title text-[10px] text-slate-400 font-bold block mb-2">TONELAJE OBJETIVO TOTAL (t)</label>
+                            <input class="w-full cyber-input px-3 py-2 rounded" id="bulkTotalTonnage" placeholder="Ej: 1000" type="number" min="1" required>
+                        </div>
+                    </div>
+
+                    <div class="mt-8 flex justify-end">
+                        <button type="submit" class="px-8 py-3 bg-[#ff0055] text-white font-cyber-title text-[12px] font-bold rounded-md cyber-glow-magenta hover:scale-[0.98] transition-all">
+                            <span class="material-symbols-outlined text-[18px]">play_circle</span>
+                            INICIAR GENERACIÓN MASIVA
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Right Side: Server Status & Actions -->
+        <div class="col-span-12 lg:col-span-4 space-y-gutter">
+            <div class="cyber-card rounded-lg p-6 h-full flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[#00f0ff] text-[24px]">sensors</span>
+                            <h3 class="font-cyber-title text-base font-bold text-[#00f0ff] tracking-wider uppercase" id="activeServerName" style="text-shadow: 0 0 5px rgba(0, 240, 255, 0.3);">Mina Principal</h3>
+                        </div>
+                        <span class="font-cyber-title text-[10px] text-[#39ff14] font-bold tracking-wider uppercase border border-[#39ff14]/30 px-2 py-0.5 rounded bg-[#39ff14]/5" id="connectionStatusBadge">Offline</span>
+                    </div>
+
+                    <div class="space-y-6">
+                        <div class="p-4 bg-black/40 border border-white/5 rounded-lg">
+                            <div class="flex justify-between items-center mb-2 text-sm">
+                                <span class="font-cyber-title text-[10px] text-slate-400 font-bold">DIRECCIÓN HOST</span>
+                                <span class="font-mono text-white select-all overflow-hidden text-ellipsis whitespace-nowrap max-w-[200px]" id="activeServerUrl">--</span>
+                            </div>
+                            <div class="flex justify-between items-center text-sm">
+                                <span class="font-cyber-title text-[10px] text-slate-400 font-bold">TOKEN EXPIRA</span>
+                                <span class="font-mono text-slate-200" id="connectionTimeDesc">No autenticado</span>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="font-cyber-title text-[11px] text-white font-bold uppercase tracking-wider">Bot de Acarreos</p>
+                                    <p class="text-[11px] text-slate-400">Registro automático aleatorio</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input class="sr-only peer" type="checkbox" id="botSwitch">
+                                    <div class="w-11 h-6 bg-white/10 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00f0ff]"></div>
+                                </label>
+                            </div>
+
+                            <!-- Temporizador de Próximo Acarreo Automático -->
+                            <div class="p-3 bg-black/30 border border-white/5 rounded-md text-[11px] space-y-1.5">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-slate-400 font-cyber-title text-[9px] font-bold uppercase">Próximo Acarreo:</span>
+                                    <span id="nextRunTimeFixed" class="font-mono text-white font-bold">Cargando...</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-slate-400 font-cyber-title text-[9px] font-bold uppercase">Tiempo Restante:</span>
+                                    <span id="nextRunTimer" class="font-mono text-[#00f0ff] font-bold">--</span>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="font-cyber-title text-[11px] text-white font-bold uppercase tracking-wider">Sincronización Local</p>
+                                    <p class="text-[11px] text-slate-400">Descarga de catálogos (15 min)</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input class="sr-only peer" type="checkbox" id="syncSwitch">
+                                    <div class="w-11 h-6 bg-white/10 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00f0ff]"></div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="pt-6 space-y-3">
+                            <button class="w-full py-4 border border-[#39ff14]/30 text-[#39ff14] hover:bg-[#39ff14] hover:text-black font-cyber-title text-[12px] font-bold flex items-center justify-center gap-3 transition-all rounded-md" id="btnBotManual">
+                                <span class="material-symbols-outlined text-[20px]">bolt</span>
+                                EJECUTAR ACARREO MANUAL
+                            </button>
+                            <button class="w-full py-4 border border-[#bc34fa]/30 text-[#bc34fa] hover:bg-[#bc34fa] hover:text-white font-cyber-title text-[12px] font-bold flex items-center justify-center gap-3 transition-all rounded-md" id="btnSyncManual">
+                                <span class="material-symbols-outlined text-[20px]">sync</span>
+                                SINCRONIZAR CATÁLOGOS
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-8 border-t border-white/10 pt-8">
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="font-cyber-title text-[11px] text-white font-bold uppercase tracking-wider">IMPORTACIÓN DIRECTA</span>
+                        <a class="text-[11px] text-[#00f0ff] hover:text-[#00f0ff]/80 font-bold underline flex items-center gap-1 transition-colors" href="/api/Import/DownloadTemplate" download>
+                            <span class="material-symbols-outlined text-[16px]">download</span> Plantilla Excel
+                        </a>
+                    </div>
+                    <div class="border-2 border-dashed border-white/10 rounded-lg p-6 flex flex-col items-center justify-center bg-black/30 hover:bg-black/50 transition-all cursor-pointer group" id="dropzone">
+                        <span class="material-symbols-outlined text-[#00f0ff] text-4xl mb-2 group-hover:scale-110 transition-transform" style="text-shadow: 0 0 10px rgba(0, 240, 255, 0.3);">cloud_upload</span>
+                        <p class="text-[12px] text-center text-slate-300 group-hover:text-white transition-colors font-medium">Suelte el archivo Excel aquí o haga clic para buscar</p>
+                        <input type="file" id="excelFile" style="opacity: 0; width: 0; height: 0; position: absolute; pointer-events: none;" accept=".xlsx, .xls">
+                    </div>
+                    <div id="uploadStatus" class="mt-2 text-center text-[12px]"></div>
+                </div>
+
+                <div class="mt-6 border-t border-white/10 pt-6 flex justify-between gap-3">
+                    <button class="flex-1 py-2.5 bg-white/5 border border-white/10 text-slate-300 text-[11px] font-cyber-title font-bold uppercase flex items-center justify-center gap-2 hover:bg-white/10 hover:text-white rounded-md transition-all" onclick="editActiveServerName()">
+                        <span class="material-symbols-outlined text-[16px]">edit</span> Renombrar
+                    </button>
+                    <button class="flex-1 py-2.5 bg-white/5 border border-white/10 text-red-400 text-[11px] font-cyber-title font-bold uppercase flex items-center justify-center gap-2 hover:bg-red-500/10 hover:border-red-500 transition-all rounded-md" id="btnDeleteServer">
+                        <span class="material-symbols-outlined text-[16px]">delete</span> Eliminar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Table Section: Last Registered Carries -->
+        <div class="col-span-12 mt-4">
+            <div class="cyber-card rounded-lg overflow-hidden">
+                <div class="p-6 border-b border-white/10 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[#00f0ff] text-[24px]">history</span>
+                        <h3 class="font-cyber-title text-base font-bold text-[#00f0ff] tracking-wider uppercase" style="text-shadow: 0 0 5px rgba(0, 240, 255, 0.3);">ÚLTIMOS ACARREOS REGISTRADOS LOCALMENTE</h3>
+                    </div>
+                    <div class="flex gap-4">
+                        <span class="text-[10px] font-mono text-[#39ff14] border border-[#39ff14]/30 px-2.5 py-1 rounded bg-[#39ff14]/5 uppercase tracking-wider font-bold">VISTA ÚLTIMOS 100</span>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="bg-white/5 border-b border-white/10 font-cyber-title text-[11px] text-[#00f0ff] font-bold tracking-wider uppercase">
+                                <th class="px-6 py-4">ID</th>
+                                <th class="px-6 py-4">VEHÍCULO</th>
+                                <th class="px-6 py-4">OPERADOR</th>
+                                <th class="px-6 py-4">RUTA</th>
+                                <th class="px-6 py-4">TONELADAS</th>
+                                <th class="px-6 py-4">FECHA DE ACARREO</th>
+                                <th class="px-6 py-4">COMENTARIOS</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-white/5 font-mono text-[13px] text-slate-200" id="latestHaulagesTableBody">
+                            <tr>
+                                <td colspan="7" class="px-6 py-8 text-center text-slate-500 font-sans">Cargando registros de acarreos locales...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Agregar Servidor -->
+<div class="modal fade frosted-modal" id="addServerModal" tabindex="-1" aria-labelledby="addServerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title font-cyber-title font-bold text-[#00f0ff]" id="addServerModalLabel"><span class="material-symbols-outlined mr-1">dns</span> Conectar Servidor SmartFlow</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="addServerForm">
+                <div class="modal-body space-y-4">
+                    <div>
+                        <label for="serverNameInput" class="form-label text-[11px] text-slate-300 font-cyber-title font-bold uppercase tracking-wider block mb-1">Nombre del Servidor / Mina</label>
+                        <input type="text" class="w-full cyber-input px-3 py-2 rounded" id="serverNameInput" placeholder="Ej. Mina Alpha" required>
+                    </div>
+                    <div>
+                        <label for="serverUrlInput" class="form-label text-[11px] text-slate-300 font-cyber-title font-bold uppercase tracking-wider block mb-1">Dirección IP o FQDN (Host)</label>
+                        <input type="text" class="w-full cyber-input px-3 py-2 rounded" id="serverUrlInput" placeholder="Ej. 192.168.1.100 o api.mina.com" required>
+                    </div>
+                    <!-- Advanced Settings for Client ID and Secret (Collapsible) -->
+                    <details class="group border border-white/10 rounded-lg p-3 bg-black/20">
+                        <summary class="font-cyber-title text-[10px] text-slate-400 font-bold uppercase tracking-wider cursor-pointer list-none flex items-center justify-between">
+                            <span>Configuración Avanzada (Client ID / Secret)</span>
+                            <span class="material-symbols-outlined text-[16px] transition-transform group-open:rotate-180">expand_more</span>
+                        </summary>
+                        <div class="grid grid-cols-2 gap-3 mt-3">
+                            <div>
+                                <label for="clientIdInput" class="form-label text-[10px] text-slate-300 font-cyber-title font-bold block mb-1">Client ID</label>
+                                <input type="text" class="w-full cyber-input px-3 py-2 rounded text-[12px]" id="clientIdInput" value="private.networking.app" required>
+                            </div>
+                            <div>
+                                <label for="clientSecretInput" class="form-label text-[10px] text-slate-300 font-cyber-title font-bold block mb-1">Client Secret</label>
+                                <input type="password" class="w-full cyber-input px-3 py-2 rounded text-[12px]" id="clientSecretInput" value="UxwYJsELeTnSc2Zz642K" required>
+                            </div>
+                        </div>
+                    </details>
+                    <div>
+                        <label for="userInput" class="form-label text-[11px] text-slate-300 font-cyber-title font-bold uppercase tracking-wider block mb-1">Usuario</label>
+                        <input type="text" class="w-full cyber-input px-3 py-2 rounded" id="userInput" placeholder="Ingresa usuario" required>
+                    </div>
+                    <div>
+                        <label for="passwordInput" class="form-label text-[11px] text-slate-300 font-cyber-title font-bold uppercase tracking-wider block mb-1">Contraseña</label>
+                        <input type="password" class="w-full cyber-input px-3 py-2 rounded" id="passwordInput" placeholder="Ingresa contraseña" required>
+                    </div>
+                    <div id="connectionError" class="text-red-500 font-bold text-xs mt-2 d-none"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="px-4 py-2 border border-white/10 text-slate-300 font-cyber-title font-bold text-[11px] rounded" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="px-6 py-2 bg-[#39ff14] text-slate-950 font-cyber-title font-bold text-[11px] rounded cyber-glow-primary" id="btnSubmitAddServer">Conectar y Registrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Corrección de Importación -->
+<div class="modal fade frosted-modal" id="correctionModal" tabindex="-1" aria-labelledby="correctionModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title font-cyber-title font-bold text-yellow-400" id="correctionModalLabel"><span class="material-symbols-outlined text-yellow-400 mr-1">report</span> Corrección de Filas con Error</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-slate-300 small mb-4">Las siguientes filas presentaron errores durante la importación. Corrige los campos erróneos directamente en la tabla y presiona "Importar Corregidos".</p>
+                
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-dark table-hover table-bordered align-middle text-light" id="correctionTable">
+                        <thead>
+                            <tr class="table-active border-secondary text-[#00f0ff] text-[11px] font-cyber-title font-bold tracking-wider">
+                                <th style="width: 50px;">Fila</th>
+                                <th>Vehículo (No. Económico)</th>
+                                <th>Empleado (No. Económico)</th>
+                                <th>Empleado (Nombre Completo)</th>
+                                <th>Ruta (Descripción)</th>
+                                <th style="width: 100px;">Peso (t)</th>
+                                <th>Material (Nombre)</th>
+                                <th style="width: 170px;">Fecha (YYYY-MM-DD HH:MM:SS)</th>
+                                <th>Detalle del Error</th>
+                            </tr>
+                        </thead>
+                        <tbody id="correctionTableBody" class="font-mono text-[12px] text-white">
+                            <!-- Dynamic failed rows will be appended here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="px-4 py-2 border border-white/10 text-slate-300 font-cyber-title font-bold text-[11px] rounded" data-bs-dismiss="modal">Descartar</button>
+                <button type="button" class="px-6 py-2 bg-[#39ff14] text-slate-950 font-cyber-title font-bold text-[11px] rounded" id="btnSubmitCorrected" onclick="submitCorrectedRows()">Importar Corregidos</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Screen overlay for processing (non-refresh) -->
+<div id="loading-screen" class="loading-screen d-none">
+    <div class="spinner-border text-[#00f0ff]" role="status" style="width: 3rem; height: 3rem;">
+        <span class="visually-hidden">Procesando...</span>
+    </div>
+    <p class="loading-text font-cyber-title font-bold text-[12px]" id="loadingText">Procesando solicitud, por favor espera...</p>
+</div>
+
+<!-- Scripts (dx references removed from layout, handled here) -->
+<script src="@Url.Content("~/js/gene.js?v=2.1")"></script>

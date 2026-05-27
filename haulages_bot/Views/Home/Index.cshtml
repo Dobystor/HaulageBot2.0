@@ -1,0 +1,99 @@
+﻿@{
+    //ViewData["Title"] = "Login"; // Define el título de la página
+    Layout = null; // Indica que esta vista no utilizará un layout específico
+}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inicio de Sesión</title>
+    <!-- Inclusión de Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <!-- Inclusión de FontAwesome para los iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <!-- Inclusión de jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Inclusión de DevExtreme JavaScript -->
+    <script src="https://cdn3.devexpress.com/jslib/20.2.5/js/dx.all.js"></script>
+    <!-- Inclusión de DevExtreme CSS -->
+    <link rel="stylesheet" href="https://cdn3.devexpress.com/jslib/20.2.5/css/dx.light.css">
+    <!-- Inclusión de estilos personalizados -->
+    <link rel="stylesheet" type="text/css" href="~/css/index.css?v=1.0" />
+</head>
+<body>
+    <div class="center-container">
+        
+
+
+
+        <!-- Imagen del logotipo -->
+        <img src="~/images/smart.png" alt="Imagen Smart" style="max-width: 300px;">
+
+
+        <div class="container">
+            <!-- Título grande LOGIN -->
+            <h1 class="display-4 text-center mb-4">LOGIN</h1>
+            <!-- Formulario de inicio de sesión -->
+            <form method="post" asp-controller="Authentication" asp-action="Login">
+                <div class="form-group">
+                    <div class="input-group mb-3">
+                        <!-- Icono de usuario -->
+                        <div class="input-group-prepend">
+                            <span class="input-group-text"><i class="fas fa-user"></i></span>
+                        </div>
+                        <input type="text" class="form-control" id="username" name="username" placeholder="Usuario" aria-label="Usuario" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="input-group mb-3">
+                        <!-- Icono de candado -->
+                        <div class="input-group-prepend">
+                            <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                        </div>
+                        <input type="password" class="form-control" id="password" name="password" placeholder="Contraseña" required>
+                        <div class="input-group-append">
+                            <button type="button" id="togglePassword" class="btn btn-secondary">
+                                <i class="fas fa-eye" id="toggleIcon"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">Login</button>
+            </form>
+
+            <!-- Mensaje de error si existe -->
+            @if (TempData["ErrorMessage"] != null)
+            {
+                <div class="alert alert-danger" style="margin-top: 15px;">
+                    @TempData["ErrorMessage"]
+                </div>
+            }
+        </div>
+        <div class="image-container">
+            <img src="~/images/beck.png" alt="Imagen de Beck" style="max-width: 100px;">
+            <img src="~/images/lasec.png" alt="Imagen de lasec" style="max-width: 100px;">
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function () {
+            $('#togglePassword').on('click', function () {
+                var passwordInput = $('#password');
+                var toggleIcon = $('#toggleIcon');
+
+                if (passwordInput.attr('type') === 'password') {
+                    passwordInput.attr('type', 'text');
+                    toggleIcon.removeClass('fa-eye').addClass('fa-eye-slash'); // Cambia a ojo cerrado
+                } else {
+                    passwordInput.attr('type', 'password');
+                    toggleIcon.removeClass('fa-eye-slash').addClass('fa-eye'); // Cambia a ojo abierto
+                }
+            });
+        });
+    </script>
+</body>
+</html>

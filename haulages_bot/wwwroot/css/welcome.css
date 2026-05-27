@@ -1,0 +1,116 @@
+﻿/*Estilo general */
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-color: #0B1C2C;
+    color: white;
+    display: flex;
+    justify-content: center;
+    /*align-items: center;*/
+    height: 150vh;
+    overflow: hidden;
+    padding: 0;
+    flex-direction: column;
+}
+
+/* Contenedor principal */
+.main-content-welcome {
+    text-align: center;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+    .main-content-welcome h1 {
+        font-size: 3rem;
+        margin-bottom: 2rem;
+    }
+
+.options-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* Responsivo */
+    gap: 2rem;
+    justify-content: center;
+    align-items: center;
+    max-width: 800px; /* Limita el ancho del contenedor */
+    padding: 0 20px; /* Espaciado horizontal para pantallas pequeñas */
+}
+
+.option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+
+    /*align-items: center;*/
+    /*justify-content: center;*/
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 2rem;
+    border-radius: 10px;
+    text-align: center;
+    transition: transform 0.3s, background-color 0.3s;
+}
+
+    .option:hover {
+        transform: scale(1.1);
+        background-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .option i {
+        font-size: 3rem;
+        margin-bottom: 0.5rem;
+        color: white;
+    }
+
+    .option span {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: white;
+    }
+
+canvas {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: -1; /* Para que el fondo esté detrás */
+}
+
+/* Media Queries para pantallas más pequeñas */
+@media (max-width: 768px) {
+    .main-content-welcome h1 {
+        font-size: 2rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .option i {
+        font-size: 2.5rem;
+    }
+
+    .option span {
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .main-content-welcome h1 {
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .option i {
+        font-size: 2rem;
+    }
+
+    .option span {
+        font-size: 0.9rem;
+    }
+
+    .options-container {
+        gap: 1rem;
+    }
+}

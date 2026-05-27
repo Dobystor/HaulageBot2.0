@@ -1,0 +1,64 @@
+/* Ajustes generales */
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-color: #f0f2f5;
+    background-image: url('../images/fon.svg');
+    background-size: cover;
+    background-repeat: no-repeat;
+}
+
+.center-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    max-width: 800px;
+    width: 100%;
+    padding: 40px; /* Aumentar padding para más espacio alrededor */
+}
+
+.container {
+    background: rgba(255, 255, 255, 0.8); /* Fondo blanco semi-transparente */
+    padding: 30px; /* Aumentar el espacio dentro del contenedor */
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 400px; /* Limitar el ancho máximo */
+    margin-top: 40px; /* Más espacio superior */
+    text-align: center;
+}
+
+h1.display-4 {
+    margin-bottom: 50px; /* Separar el título */
+}
+
+img {
+    margin-bottom: 40px; /* Más espacio debajo de la imagen */
+}
+
+.form-group {
+    margin-bottom: 50px; /* Separar los grupos del formulario */
+}
+
+.btn-primary {
+    margin-top: 30px; /* Espacio extra sobre el botón de Login */
+}
+
+.image-container {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin-top: 40px; /* Más espacio entre el formulario y las imágenes */
+}
+
+    .image-container img {
+        max-width: 150px; /* Limitar el ancho de las imágenes */
+        height: auto; /* Mantener proporciones */
+        border-radius: 8px; /* Borde redondeado */
+        margin: 0 20px; /* Separar las imágenes entre sí */
+    }

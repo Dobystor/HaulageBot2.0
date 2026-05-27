@@ -1,0 +1,483 @@
+@{
+    ViewData["Title"] = "Login";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inicio de Sesión - SmartFlow Multi-Bot</title>
+    
+    <!-- Inclusión de Bootstrap CSS & FontAwesome -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <style>
+        :root {
+            --bg-main: #060913;
+            --card-bg: rgba(13, 20, 35, 0.65);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --neon-cyan: #00f0ff;
+            --neon-pink: #ff0055;
+            --neon-purple: #bc34fa;
+            --font-sans: 'Outfit', sans-serif;
+            --font-future: 'Orbitron', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(188, 52, 250, 0.06) 0%, rgba(5, 7, 12, 0) 40%),
+                radial-gradient(circle at 90% 80%, rgba(0, 240, 255, 0.05) 0%, rgba(5, 7, 12, 0) 50%);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .login-wrapper {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border);
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.5), 0 0 30px rgba(0, 240, 255, 0.05);
+            border-radius: 16px;
+            padding: 40px;
+            width: 100%;
+            max-width: 450px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .login-wrapper:hover {
+            border-color: rgba(0, 240, 255, 0.2);
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.6), 0 0 35px rgba(0, 240, 255, 0.1);
+        }
+
+        .brand-logo {
+            max-width: 200px;
+            margin-bottom: 25px;
+            filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.4));
+        }
+
+        .login-title {
+            font-family: var(--font-future);
+            font-weight: 900;
+            font-size: 1.8rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 30px;
+            background: linear-gradient(135deg, #fff 30%, var(--neon-cyan) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
+        }
+
+        /* Inputs & Input Groups */
+        .input-group-text {
+            background: rgba(0, 0, 0, 0.4) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-right: none !important;
+            color: var(--neon-cyan) !important;
+            border-radius: 8px 0 0 8px !important;
+            font-size: 1rem;
+            width: 45px;
+            height: 48px !important;
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #serverUrl.custom-active {
+            border-radius: 0 !important;
+        }
+
+
+        .form-control, .form-select, select.form-control {
+            background: rgba(0, 0, 0, 0.4) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            color: #fff !important;
+            border-radius: 0 8px 8px 0 !important;
+            height: 48px;
+            font-size: 0.95rem;
+            transition: all 0.3s;
+        }
+
+        select.form-control {
+            border-radius: 0 8px 8px 0 !important;
+        }
+
+        .form-control:focus, select.form-control:focus {
+            border-color: var(--neon-purple) !important;
+            box-shadow: 0 0 8px rgba(188, 52, 250, 0.4) !important;
+            outline: none;
+            background: rgba(0, 0, 0, 0.6) !important;
+        }
+
+        #serverUrl.standalone {
+            border-radius: 8px !important;
+            margin-top: 10px;
+        }
+
+        /* Password visibility btn */
+        #togglePassword {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-left: none;
+            color: var(--text-secondary);
+            border-radius: 0 8px 8px 0 !important;
+            height: 48px;
+            transition: all 0.3s;
+        }
+        #togglePassword:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        #password {
+            border-radius: 0 !important;
+        }
+
+        /* Neon Glow Button */
+        .neon-btn-submit {
+            background: transparent;
+            border: 1px solid var(--neon-cyan);
+            color: var(--neon-cyan);
+            font-family: var(--font-future);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            height: 48px;
+            border-radius: 8px;
+            transition: all 0.3s;
+            cursor: pointer;
+            box-shadow: inset 0 0 0 0 rgba(0, 240, 255, 0.2);
+            font-size: 1rem;
+        }
+
+        .neon-btn-submit:hover {
+            background: var(--neon-cyan);
+            color: #000;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.6);
+            text-shadow: none;
+        }
+
+        .alert-cyber {
+            background: rgba(255, 0, 85, 0.1) !important;
+            border: 1px solid var(--neon-pink) !important;
+            color: #fff !important;
+            border-radius: 8px !important;
+            box-shadow: 0 0 10px rgba(255, 0, 85, 0.15);
+            font-size: 0.85rem;
+            margin-top: 20px;
+            padding: 12px 15px;
+        }
+
+        .footer-logos {
+            margin-top: 35px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            opacity: 0.6;
+            transition: opacity 0.3s;
+        }
+
+        .footer-logos:hover {
+            opacity: 0.9;
+        }
+
+        .footer-logos img {
+            max-height: 24px;
+            filter: grayscale(1) brightness(1.5);
+        }
+        .server-card:hover {
+            background: rgba(0, 240, 255, 0.08) !important;
+            border-color: var(--neon-cyan) !important;
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.15);
+        }
+        .delete-server-btn {
+            opacity: 0.5;
+        }
+        .delete-server-btn:hover {
+            opacity: 1 !important;
+            color: #ff0055 !important;
+            transform: scale(1.15);
+            filter: drop-shadow(0 0 5px rgba(255, 0, 85, 0.5));
+        }
+        .btn-link:focus {
+            box-shadow: none !important;
+            text-decoration: none !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="login-wrapper">
+        <!-- Logo -->
+        <img src="~/images/smart.png" alt="SmartFlow" class="brand-logo">
+
+        <!-- Title -->
+        <h1 class="login-title">Acceder al Nodo</h1>
+
+        <!-- PANEL 1: Server Selection -->
+        <div id="panel-server-selection">
+            <h2 class="mb-4" style="color: var(--text-secondary); font-size: 0.95rem; font-family: var(--font-future); letter-spacing: 1px; text-transform: uppercase;">Seleccionar Servidor</h2>
+            
+            <div id="server-cards-container" class="mb-4 text-left" style="max-height: 280px; overflow-y: auto; padding-right: 5px;">
+                @if (ViewBag.Servers != null && ((List<ServerConfig>)ViewBag.Servers).Count > 0)
+                {
+                    @foreach (var s in (List<ServerConfig>)ViewBag.Servers)
+                    {
+                        <div class="server-card d-flex justify-content-between align-items-center p-3 mb-2" 
+                             style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; cursor: pointer; transition: all 0.2s;"
+                             data-id="@s.Id" data-url="@s.ApiUrl" data-name="@s.Name" data-username="@s.Username" data-password="@s.Password"
+                             onclick="selectServerCard(this)">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-server mr-3" style="color: var(--neon-cyan); font-size: 1.2rem;"></i>
+                                <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;">
+                                    <div style="font-weight: 600; color: #fff; font-size: 0.95rem;">@s.Name</div>
+                                    <div class="small text-muted" style="font-size: 0.8rem;">@s.ApiUrl</div>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-sm text-danger delete-server-btn" 
+                                    style="background: transparent; border: none; font-size: 1rem; padding: 5px 10px; transition: all 0.2s;" 
+                                    onclick="deleteServerCard(event, @s.Id, '@s.Name')">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="text-muted py-4 text-center" style="font-size: 0.9rem;">
+                        <i class="fas fa-info-circle mb-2 d-block" style="font-size: 1.5rem; color: var(--neon-pink);"></i>
+                        No hay servidores registrados aún.
+                    </div>
+                }
+            </div>
+
+            <!-- Button to register new server -->
+            <button type="button" class="btn btn-block mb-3" id="btn-show-add-server" 
+                    style="background: rgba(0, 240, 255, 0.05); border: 1px dashed var(--neon-cyan); color: var(--neon-cyan); height: 48px; border-radius: 8px; font-weight: bold; font-family: var(--font-future); text-transform: uppercase; font-size: 0.9rem; transition: all 0.3s;"
+                    onclick="showNewServerForm()">
+                <i class="fas fa-plus mr-2"></i> Registrar Servidor
+            </button>
+        </div>
+
+        <!-- PANEL 1.5: Register New Server Form -->
+        <div id="panel-new-server" class="d-none text-left">
+            <h2 class="mb-4 text-center" style="color: var(--text-secondary); font-size: 0.95rem; font-family: var(--font-future); letter-spacing: 1px; text-transform: uppercase;">Nuevo Servidor</h2>
+            
+            <div class="form-group mb-3">
+                <label style="color: var(--text-secondary); font-size: 0.85rem;">Nombre del Servidor / Mina</label>
+                <div class="input-group">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text"><i class="fas fa-tag"></i></span>
+                    </div>
+                    <input type="text" class="form-control" id="newServerName" placeholder="Ej. Mina Alpha" style="border-radius: 0 8px 8px 0 !important;">
+                </div>
+            </div>
+            
+            <div class="form-group mb-4">
+                <label style="color: var(--text-secondary); font-size: 0.85rem;">IP / FQDN (API URL)</label>
+                <div class="input-group">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text"><i class="fas fa-globe"></i></span>
+                    </div>
+                    <input type="text" class="form-control" id="newServerUrl" placeholder="Ej. 192.168.1.100 o api.mina.com" style="border-radius: 0 8px 8px 0 !important;">
+                </div>
+            </div>
+
+            <div class="row g-2">
+                <div class="col-6">
+                    <button type="button" class="btn btn-block" onclick="cancelNewServer()"
+                            style="background: rgba(255, 0, 85, 0.05); border: 1px solid var(--neon-pink); color: var(--neon-pink); height: 45px; border-radius: 8px; font-weight: bold; font-family: var(--font-future); font-size: 0.85rem;">
+                        Cancelar
+                    </button>
+                </div>
+                <div class="col-6">
+                    <button type="button" class="btn btn-block neon-btn-submit" onclick="submitNewServer()"
+                            style="height: 45px; line-height: 30px; font-size: 0.85rem;">
+                        Siguiente
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- PANEL 2: Credentials Login -->
+        <div id="panel-credentials" class="d-none text-left">
+            <div class="d-flex align-items-center mb-3">
+                <button type="button" class="btn text-info p-0 mr-3" onclick="backToServers()" style="font-size: 1.2rem; background: transparent; border: none;">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <h2 class="mb-0" style="color: var(--text-secondary); font-size: 0.95rem; font-family: var(--font-future); letter-spacing: 1px; text-transform: uppercase;">Iniciar Sesión</h2>
+            </div>
+
+            <div class="selected-server-banner p-3 mb-4" style="background: rgba(0, 240, 255, 0.05); border: 1px solid rgba(0, 240, 255, 0.15); border-radius: 8px;">
+                <span class="text-secondary small d-block">Conectando a:</span>
+                <span id="selected-server-display-name" style="font-weight: bold; color: #fff;">-</span>
+                <span id="selected-server-display-url" class="text-muted d-block small mt-1">-</span>
+            </div>
+
+            <form method="post" asp-controller="Authentication" asp-action="Login" id="loginForm">
+                <input type="hidden" id="serverUrl" name="serverUrl">
+                <input type="hidden" id="serverName" name="serverName">
+
+                <!-- Username -->
+                <div class="form-group mb-4">
+                    <label style="color: var(--text-secondary); font-size: 0.85rem;">Usuario de SmartFlow</label>
+                    <div class="input-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text"><i class="fas fa-user"></i></span>
+                        </div>
+                        <input type="text" class="form-control" id="username" name="username" placeholder="Usuario" required style="border-radius: 0 8px 8px 0 !important;">
+                    </div>
+                </div>
+
+                <!-- Password -->
+                <div class="form-group mb-4">
+                    <label style="color: var(--text-secondary); font-size: 0.85rem;">Contraseña</label>
+                    <div class="input-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                        </div>
+                        <input type="password" class="form-control" id="password" name="password" placeholder="Contraseña" required>
+                        <div class="input-group-append">
+                            <button type="button" id="togglePassword" class="btn">
+                                <i class="fas fa-eye" id="toggleIcon"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit -->
+                <button type="submit" class="btn btn-block neon-btn-submit">Iniciar Sesión</button>
+            </form>
+        </div>
+
+        <!-- Error Messages -->
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-cyber">
+                <i class="fas fa-exclamation-triangle mr-2"></i> @TempData["ErrorMessage"]
+            </div>
+        }
+
+        <!-- Footer Partner Logos -->
+        <div class="footer-logos">
+            <img src="~/images/beck.png" alt="Becker">
+            <img src="~/images/lasec.png" alt="Lasec">
+        </div>
+    </div>
+
+    <script>
+        // Password Show/Hide Toggle
+        $('#togglePassword').on('click', function () {
+            const passwordInput = $('#password');
+            const toggleIcon = $('#toggleIcon');
+
+            if (passwordInput.attr('type') === 'password') {
+                passwordInput.attr('type', 'text');
+                toggleIcon.removeClass('fa-eye').addClass('fa-eye-slash');
+            } else {
+                passwordInput.attr('type', 'password');
+                toggleIcon.removeClass('fa-eye-slash').addClass('fa-eye');
+            }
+        });
+
+        // Step navigation logic
+        function selectServerCard(element) {
+            const url = $(element).data('url');
+            const name = $(element).data('name');
+            const username = $(element).data('username') || '';
+            const password = $(element).data('password') || '';
+            
+            $('#serverUrl').val(url);
+            $('#serverName').val(name);
+            $('#selected-server-display-name').text(name);
+            $('#selected-server-display-url').text(url);
+            $('#username').val(username);
+            $('#password').val(password);
+            
+            $('#panel-server-selection').addClass('d-none');
+            $('#panel-credentials').removeClass('d-none');
+        }
+
+        function showNewServerForm() {
+            $('#newServerName').val('');
+            $('#newServerUrl').val('');
+            $('#panel-server-selection').addClass('d-none');
+            $('#panel-new-server').removeClass('d-none');
+        }
+
+        function cancelNewServer() {
+            $('#panel-new-server').addClass('d-none');
+            $('#panel-server-selection').removeClass('d-none');
+        }
+
+        function submitNewServer() {
+            const name = $('#newServerName').val().trim();
+            const url = $('#newServerUrl').val().trim();
+            
+            if (!url) {
+                alert("Debes ingresar la dirección IP o Host del servidor.");
+                return;
+            }
+            
+            const displayName = name || url;
+            
+            $('#serverUrl').val(url);
+            $('#serverName').val(displayName);
+            $('#selected-server-display-name').text(displayName);
+            $('#selected-server-display-url').text(url);
+            $('#username').val('');
+            $('#password').val('');
+            
+            $('#panel-new-server').addClass('d-none');
+            $('#panel-credentials').removeClass('d-none');
+        }
+
+        function backToServers() {
+            $('#panel-credentials').addClass('d-none');
+            $('#panel-server-selection').removeClass('d-none');
+        }
+
+        function deleteServerCard(event, id, name) {
+            event.stopPropagation(); // Avoid triggering selection
+            if (!confirm(`¿Estás seguro de eliminar el servidor "${name}"? Se borrarán todos los acarreos e historial local de este servidor.`)) return;
+            
+            $.ajax({
+                url: `/api/ServerConfig/${id}`,
+                type: 'DELETE',
+                success: function() {
+                    $(`.server-card[data-id="${id}"]`).fadeOut(300, function() {
+                        $(this).remove();
+                        if ($('#server-cards-container .server-card').length === 0) {
+                            $('#server-cards-container').html(`
+                                <div class="text-muted py-4 text-center" style="font-size: 0.9rem;">
+                                    <i class="fas fa-info-circle mb-2 d-block" style="font-size: 1.5rem; color: var(--neon-pink);"></i>
+                                    No hay servidores registrados aún.
+                                </div>
+                            `);
+                        }
+                    });
+                },
+                error: function(xhr) {
+                    alert("Error al eliminar el servidor: " + xhr.responseText);
+                }
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+stages:
+  - BUILD
+  - PUBLISH
+
+Build Sources:
+  stage: BUILD
+  image: developer.lasec.com.mx:5000/smartflow/ci/runner-image/net8.0:dev
+  variables:
+    GITLAB_USERNAME: gitlab-ci-token
+    GTILAB_JOB_TOKEN: $CI_JOB_TOKEN
+  script:
+    - cp tempnuget.config nuget.config
+    - if [ -f "./checkout.sh" ]; then ./checkout.sh; fi
+    - if [ -f "./build.sh" ]; then ./build.sh; fi
+  artifacts:
+    name: "$CI_JOB_NAME-$CI_COMMIT_REF_NAME"
+    paths:
+      - "$CI_PROJECT_NAME/obj/Docker/publish"
+
+
+Docker hub:
+  stage: PUBLISH
+  script:
+    - cd $CI_PROJECT_NAME
+    - docker login -u leonquezadalasec -p b7b6c070-682d-4a39-aff2-fc301abe001e
+    - docker build -t lasec/haulage_bot:${CI_COMMIT_TAG,,} .
+    - docker push lasec/haulage_bot:${CI_COMMIT_TAG,,}
+  only:
+    - tags
+  dependencies:
+    - Build Sources
+
+Docker Image DEV:
+  stage: PUBLISH
+  script:
+    - cd $CI_PROJECT_NAME
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build -t ${CI_REGISTRY}/${CI_PROJECT_PATH,,}/${CI_COMMIT_REF_NAME,,}:dev .
+    - docker push ${CI_REGISTRY}/${CI_PROJECT_PATH,,}/${CI_COMMIT_REF_NAME,,}:dev
+  except:
+    - tags
+  dependencies:
+    - Build Sources
+
+Docker Image:
+  stage: PUBLISH
+  script:
+    - cd src/$CI_PROJECT_NAME
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build -t ${CI_REGISTRY}/${CI_PROJECT_PATH,,}:${CI_COMMIT_TAG,,} -t ${CI_REGISTRY}/${CI_PROJECT_PATH,,}:latest .
+    - docker push ${CI_REGISTRY}/${CI_PROJECT_PATH,,}:${CI_COMMIT_TAG,,}
+    - docker push ${CI_REGISTRY}/${CI_PROJECT_PATH,,}:latest
+  only:
+    - tags
+  dependencies:
+    - Build Sources

@@ -1,0 +1,323 @@
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Gestión de Servidores";
+}
+
+<style>
+    .font-cyber-title {
+        font-family: 'Orbitron', sans-serif;
+    }
+    .cyber-input {
+        background: rgba(0, 0, 0, 0.5) !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        color: #ffffff !important;
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    .cyber-input:focus {
+        border-color: #00f0ff !important;
+        box-shadow: 0 0 8px rgba(0, 240, 255, 0.3) !important;
+        outline: none !important;
+    }
+</style>
+
+<div class="container-fluid py-4">
+    <div class="flex justify-between items-center mb-8">
+        <div>
+            <h2 class="font-cyber-title text-2xl font-bold tracking-tight text-[#00f0ff]" style="text-shadow: 0 0 5px rgba(0, 240, 255, 0.3);">
+                <span class="material-symbols-outlined text-[#00f0ff] mr-2 text-3xl">dns</span> GESTIÓN DE SERVIDORES
+            </h2>
+            <p class="text-slate-300 text-sm mt-1 font-medium">Agrega, edita y configura los servidores de SmartFlow vinculados a este bot.</p>
+        </div>
+        <button class="px-6 py-2.5 bg-[#00f0ff] text-slate-950 font-cyber-title text-[11px] font-bold rounded-md cyber-glow-primary hover:scale-[0.98] transition-transform" onclick="openServerModal()">
+            <span class="material-symbols-outlined mr-1">add</span> NUEVO SERVIDOR
+        </button>
+    </div>
+
+    <!-- Lista de Servidores -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="serversList">
+        <div class="col-span-3 text-center py-12">
+            <span class="text-slate-400 opacity-50 small">Cargando servidores registrados...</span>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Agregar/Editar Servidor -->
+<div class="modal fade frosted-modal" id="serverModal" tabindex="-1" role="dialog" aria-labelledby="serverModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title font-cyber-title font-bold text-[#00f0ff]" id="serverModalLabel"><span class="material-symbols-outlined mr-1">settings</span> Configurar Servidor</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body space-y-4">
+                <form id="serverForm">
+                    <input type="hidden" id="serverId" />
+                    <div class="mb-3">
+                        <label class="font-cyber-title text-[11px] text-slate-300 font-bold uppercase tracking-wider block mb-1">Nombre del Servidor</label>
+                        <input type="text" class="w-full cyber-input px-3 py-2 rounded" id="serverName" placeholder="Ej: Mina Principal" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="font-cyber-title text-[11px] text-slate-300 font-bold uppercase tracking-wider block mb-1">URL de API (FQDN/IP)</label>
+                        <input type="text" class="w-full cyber-input px-3 py-2 rounded" id="serverUrl" placeholder="demo-acarreos.smartflow.com.mx o 10.174.189.39" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="font-cyber-title text-[11px] text-slate-300 font-bold uppercase tracking-wider block mb-1">Usuario</label>
+                        <input type="text" class="w-full cyber-input px-3 py-2 rounded" id="serverUsername" placeholder="Ingresa usuario" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="font-cyber-title text-[11px] text-slate-300 font-bold uppercase tracking-wider block mb-1">Contraseña</label>
+                        <input type="password" class="w-full cyber-input px-3 py-2 rounded" id="serverPassword" placeholder="Ingresa contraseña" required>
+                    </div>
+                    
+                    <!-- Advanced Settings for Client ID and Secret (Collapsible) -->
+                    <details class="group border border-white/10 rounded-lg p-3 bg-black/20">
+                        <summary class="font-cyber-title text-[10px] text-slate-400 font-bold uppercase tracking-wider cursor-pointer list-none flex items-center justify-between">
+                            <span>Configuración Avanzada (Client ID / Secret)</span>
+                            <span class="material-symbols-outlined text-[16px] transition-transform group-open:rotate-180">expand_more</span>
+                        </summary>
+                        <div class="grid grid-cols-2 gap-3 mt-3">
+                            <div>
+                                <label for="serverClientId" class="form-label text-[10px] text-slate-300 font-cyber-title font-bold block mb-1">Client ID</label>
+                                <input type="text" class="w-full cyber-input px-3 py-2 rounded text-[12px]" id="serverClientId" value="private.networking.app" required>
+                            </div>
+                            <div>
+                                <label for="serverClientSecret" class="form-label text-[10px] text-slate-300 font-cyber-title font-bold block mb-1">Client Secret</label>
+                                <input type="password" class="w-full cyber-input px-3 py-2 rounded text-[12px]" id="serverClientSecret" value="UxwYJsELeTnSc2Zz642K" required>
+                            </div>
+                        </div>
+                    </details>
+                    
+                    <div id="modalConnectionError" class="text-red-500 font-bold text-xs mt-2 d-none"></div>
+
+                    <div class="flex items-center gap-2 mt-4">
+                        <input type="checkbox" class="rounded border-white/20 text-[#00f0ff] bg-black/50 focus:ring-0 cursor-pointer" id="serverIsActive" checked>
+                        <label class="text-[12px] text-white font-medium cursor-pointer" for="serverIsActive">Servidor Activo</label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="px-4 py-2 border border-white/10 text-slate-300 font-cyber-title font-bold text-[11px] rounded" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="px-6 py-2 bg-[#39ff14] text-slate-950 font-cyber-title font-bold text-[11px] rounded" id="btnSaveServer" onclick="saveServer()">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let serverModal;
+
+        $(document).ready(function() {
+            serverModal = new bootstrap.Modal(document.getElementById('serverModal'));
+            loadServers();
+
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('add') === 'true') {
+                openServerModal();
+            }
+        });
+
+        function loadServers() {
+            $.get('/api/ServerConfig', function(data) {
+                $('#serversList').empty();
+                if (data.length === 0) {
+                    $('#serversList').append(`
+                        <div class="col-span-3 text-center py-12 bg-black/30 border border-white/10 rounded-lg">
+                            <p class="text-slate-400 font-medium">No hay servidores registrados aún.</p>
+                        </div>
+                    `);
+                    return;
+                }
+
+                const activeId = localStorage.getItem('activeServerId');
+
+                data.forEach(function(server) {
+                    const isWorking = (server.id == activeId);
+                    const workingBadge = isWorking ? 
+                        `<span class="px-2.5 py-0.5 bg-[#00f0ff]/15 text-[#00f0ff] border border-[#00f0ff]/30 font-bold rounded text-[10px] tracking-wider font-cyber-title uppercase">SELECCIONADO</span>` : '';
+                    
+                    const statusClass = server.isActive ? 'bg-[#39ff14] shadow-[0_0_8px_#39ff14]' : 'bg-slate-500';
+                    const statusText = server.isActive ? 'Activo' : 'Inactivo';
+
+                    const card = `
+                        <div class="cyber-card rounded-lg p-6 flex flex-col justify-between ${isWorking ? 'border-[#00f0ff]/50 shadow-[0_0_15px_rgba(0,240,255,0.05)]' : ''}">
+                            <div>
+                                <div class="flex items-center justify-between mb-4">
+                                    <div class="flex items-center gap-2">
+                                        <span class="status-dot ${statusClass}"></span>
+                                        <h5 class="font-cyber-title text-base font-bold text-white uppercase tracking-wider">${server.name}</h5>
+                                    </div>
+                                    ${workingBadge}
+                                </div>
+                                <div class="p-4 bg-black/40 border border-white/5 rounded-lg mb-6 font-mono text-[12px] break-all text-white">
+                                    <span class="text-slate-400 block text-[9px] font-cyber-title font-bold tracking-widest mb-1 uppercase opacity-75">URL DE API</span>
+                                    <span class="font-medium">${server.apiUrl}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="space-y-3">
+                                <div class="flex gap-2">
+                                    <button class="flex-1 py-2 bg-white/5 border border-white/10 text-slate-300 text-[11px] font-cyber-title font-bold uppercase flex items-center justify-center gap-1 hover:bg-white/10 hover:text-white rounded-md transition-all" onclick='editServer(${JSON.stringify(server)})'>
+                                        <span class="material-symbols-outlined text-[14px]">edit</span> Editar
+                                    </button>
+                                    <button class="py-2 px-3 bg-white/5 border border-white/10 text-red-400 hover:bg-red-500/10 hover:border-red-500 transition-all flex items-center justify-center rounded-md" onclick="deleteServer(${server.id})">
+                                        <span class="material-symbols-outlined text-[16px]">delete</span>
+                                    </button>
+                                </div>
+                                <button class="w-full py-2.5 ${isWorking ? 'bg-[#00f0ff]/10 text-[#00f0ff]/70 border border-[#00f0ff]/20 cursor-default' : 'bg-[#00f0ff] text-slate-950 hover:scale-[0.98] transition-transform font-bold'} text-[11px] font-cyber-title font-bold uppercase flex items-center justify-center gap-2 rounded-md" ${isWorking ? 'disabled' : `onclick="selectServer(${server.id}, '${server.name}')"`}>
+                                    <span class="material-symbols-outlined text-[16px]">${isWorking ? 'check_circle' : 'import_contacts'}</span>
+                                    ${isWorking ? 'TRABAJANDO AQUÍ' : 'TRABAJAR EN ESTE SERVIDOR'}
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    $('#serversList').append(card);
+                });
+            });
+        }
+
+        function openServerModal() {
+            $('#serverForm')[0].reset();
+            $('#serverId').val('');
+            $('#serverUsername').val('');
+            $('#serverPassword').val('');
+            $('#serverPassword').prop('required', true);
+            $('#serverPassword').attr('placeholder', 'Ingresa contraseña');
+            $('#serverClientId').val('smartflow.csharp.client');
+            $('#serverClientSecret').val('secret');
+            $('#modalConnectionError').addClass('d-none').text('');
+            $('#serverModalLabel').html('<span class="material-symbols-outlined mr-1">add</span> AGREGAR SERVIDOR');
+            serverModal.show();
+        }
+
+        function editServer(server) {
+            $('#serverId').val(server.id);
+            $('#serverName').val(server.name);
+            $('#serverUrl').val(server.apiUrl);
+            $('#serverUsername').val(server.username || '');
+            $('#serverPassword').val(''); // keep blank unless updating
+            $('#serverPassword').prop('required', false);
+            $('#serverPassword').attr('placeholder', 'Contraseña (vacía para conservar la actual)');
+            $('#serverClientId').val(server.clientId || 'smartflow.csharp.client');
+            $('#serverClientSecret').val(server.clientSecret || 'secret');
+            $('#serverIsActive').prop('checked', server.isActive);
+            $('#modalConnectionError').addClass('d-none').text('');
+            $('#serverModalLabel').html('<span class="material-symbols-outlined mr-1">edit</span> EDITAR SERVIDOR');
+            serverModal.show();
+        }
+
+        function saveServer() {
+            var id = $('#serverId').val();
+            var name = $('#serverName').val().trim();
+            var apiUrl = $('#serverUrl').val().trim();
+            var username = $('#serverUsername').val().trim();
+            var password = $('#serverPassword').val().trim();
+            var clientId = $('#serverClientId').val().trim();
+            var clientSecret = $('#serverClientSecret').val().trim();
+            var isActive = $('#serverIsActive').is(':checked');
+
+            if (!name || !apiUrl || !username || (!id && !password)) {
+                alert('Por favor complete todos los campos requeridos.');
+                return;
+            }
+
+            var serverData = {
+                name: name,
+                apiUrl: apiUrl,
+                username: username,
+                password: password || null,
+                clientId: clientId || "smartflow.csharp.client",
+                clientSecret: clientSecret || "secret",
+                isActive: isActive
+            };
+
+            if (id) {
+                serverData.id = parseInt(id);
+            }
+
+            $('#btnSaveServer').prop('disabled', true).text(id ? 'Guardando...' : 'Conectando...');
+            $('#modalConnectionError').addClass('d-none').text('');
+
+            var type = id ? 'PUT' : 'POST';
+            var url = id ? '/api/ServerConfig/' + id : '/api/ServerConfig/connect';
+
+            $.ajax({
+                url: url,
+                type: type,
+                contentType: 'application/json',
+                data: JSON.stringify(serverData),
+                success: function(response) {
+                    serverModal.hide();
+                    loadServers();
+                    
+                    const activeId = localStorage.getItem('activeServerId');
+                    if (id && id == activeId) {
+                        localStorage.setItem('activeServerName', serverData.name);
+                        if (window.parent && window.parent.updateHeaderServerName) {
+                            window.parent.updateHeaderServerName();
+                        } else if (window.updateHeaderServerName) {
+                            window.updateHeaderServerName();
+                        }
+                    }
+                },
+                error: function(xhr) {
+                    let errText = "Error al procesar la solicitud.";
+                    try {
+                        const resJson = JSON.parse(xhr.responseText);
+                        if (resJson.message) errText = resJson.message;
+                    } catch(e) {}
+                    
+                    $('#modalConnectionError').removeClass('d-none').text(errText);
+                },
+                complete: function() {
+                    $('#btnSaveServer').prop('disabled', false).text(id ? 'Guardar Cambios' : 'Conectar y Registrar');
+                }
+            });
+        }
+
+        function deleteServer(id) {
+            if(confirm('¿Está seguro de eliminar este servidor? Se perderá toda la configuración y acarreos asociados.')) {
+                $.ajax({
+                    url: '/api/ServerConfig/' + id,
+                    type: 'DELETE',
+                    success: function() {
+                        const activeId = localStorage.getItem('activeServerId');
+                        if (id == activeId) {
+                            localStorage.removeItem('activeServerId');
+                            localStorage.removeItem('activeServerName');
+                            if (window.parent && window.parent.updateHeaderServerName) {
+                                window.parent.updateHeaderServerName();
+                            } else if (window.updateHeaderServerName) {
+                                window.updateHeaderServerName();
+                            }
+                        }
+                        loadServers();
+                    }
+                });
+            }
+        }
+
+        function selectServer(id, name) {
+            localStorage.setItem('activeServerId', id);
+            localStorage.setItem('activeServerName', name);
+            
+            if (window.parent && window.parent.updateHeaderServerName) {
+                window.parent.updateHeaderServerName();
+            } else if (window.updateHeaderServerName) {
+                window.updateHeaderServerName();
+            }
+            
+            loadServers();
+
+            if (window.parent && window.parent.refreshLayoutTimer) {
+                window.parent.refreshLayoutTimer();
+            } else if (window.refreshLayoutTimer) {
+                window.refreshLayoutTimer();
+            }
+
+            alert('Servidor seleccionado: ' + name + '\nLos catálogos y configuraciones ahora se sincronizarán con este servidor.');
+        }
+    </script>
+}

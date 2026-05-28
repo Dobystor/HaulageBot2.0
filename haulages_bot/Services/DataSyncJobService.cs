@@ -235,6 +235,8 @@ public class DataSyncJobService : IHostedService, IDisposable
         catch (Exception ex)
         {
             _logger.LogError($"Error al ejecutar bot automático para el servidor ID {serverId}: {ex.Message}");
+            _logHistoryService.AddLog(serverId, $"Error en bot automático: {ex.Message}", true);
+            await _notificationHubContext.Clients.All.SendAsync("ReceiveNotification", new { ServerId = serverId, Error = true, Message = $"Error bot automático: {ex.Message}" });
         }
         finally
         {
@@ -252,7 +254,10 @@ public class DataSyncJobService : IHostedService, IDisposable
         var dataConfig = await configService.GetDataConfiguration(server.Id);
         if (dataConfig == null)
         {
-            _logger.LogError($"No se pudo obtener la configuración de datos para el servidor '{server.Name}'");
+            var errMsg = $"No se pudo obtener la configuración de datos para el servidor '{server.Name}'. Configura el bot primero.";
+            _logger.LogError(errMsg);
+            _logHistoryService.AddLog(server.Id, errMsg, true);
+            await _notificationHubContext.Clients.All.SendAsync("ReceiveNotification", new { ServerId = server.Id, Error = true, Message = errMsg });
             return;
         }
 
@@ -272,7 +277,10 @@ public class DataSyncJobService : IHostedService, IDisposable
 
         if (employeeDetail == null || routeDetail == null || vehicleDetail == null)
         {
-            _logger.LogWarning($"Datos de catálogo incompletos para bot en '{server.Name}' (Empleado: {randomEmployee}, Ruta: {randomRoute}, Vehículo: {randomVehicle}). Saltando registro.");
+            var warningMsg = $"Datos de catálogo incompletos para bot en '{server.Name}' (Empleado: {randomEmployee}, Ruta: {randomRoute}, Vehículo: {randomVehicle}). Sincroniza catálogos y activa elementos en la configuración.";
+            _logger.LogWarning(warningMsg);
+            _logHistoryService.AddLog(server.Id, warningMsg, true);
+            await _notificationHubContext.Clients.All.SendAsync("ReceiveNotification", new { ServerId = server.Id, Error = true, Message = warningMsg });
             return;
         }
 

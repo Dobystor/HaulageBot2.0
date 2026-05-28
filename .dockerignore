@@ -28,3 +28,7 @@ README.md
 !.git/config
 !.git/packed-refs
 !.git/refs/heads/**
+# Excluir base de datos SQLite local — cada instancia debe arrancar con DB vacía
+**/*.db
+**/*.db-shm
+**/*.db-wal

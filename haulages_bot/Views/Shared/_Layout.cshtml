@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html class="dark" lang="es">
+<html lang="es">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,229 +8,504 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     
-    <!-- Google Fonts & Material Symbols -->
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Orbitron:wght@600;700;900&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
 
-    <!-- Bootstrap 5 CSS (for modal functionality) -->
+    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     
     <!-- Flatpickr Date Picker -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css" />
 
     <style>
+        :root {
+            --bg: #001828;
+            --bg-2: #002237;
+            --bg-3: #002b49;
+            --bg-4: #00375c;
+            --border: rgba(193, 197, 200, 0.15);
+            --border-light: rgba(193, 197, 200, 0.3);
+            --text: #f8fafc;
+            --text-muted: #c1c5c8;
+            --text-dim: #8b949e;
+            --accent: #0a5da7;
+            --accent-dim: rgba(10, 93, 167, 0.12);
+            --accent-border: rgba(10, 93, 167, 0.3);
+            --accent-teal: #36b0c9;
+            --danger: #ef4444;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --sidebar-w: 220px;
+            --header-h: 56px;
+        }
+
+        * { box-sizing: border-box; }
+
         body {
-            background-color: #060913 !important;
-            background-image: 
-                radial-gradient(circle at 10% 20%, rgba(188, 52, 250, 0.08) 0%, rgba(5, 7, 12, 0) 40%),
-                radial-gradient(circle at 90% 80%, rgba(0, 240, 255, 0.06) 0%, rgba(5, 7, 12, 0) 50%) !important;
-            color: #f8fafc !important;
-            font-family: 'Outfit', sans-serif !important;
+            background-color: var(--bg) !important;
+            color: var(--text) !important;
+            font-family: 'Inter', sans-serif !important;
+            margin: 0;
+            overflow: hidden;
         }
 
-        /* Glassmorphic Cyber Cards */
-        .cyber-card {
-            background: rgba(13, 20, 35, 0.65) !important;
-            backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        /* === SCROLLBAR === */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #444; }
+
+        /* === HEADER === */
+        #app-header {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: var(--header-h);
+            background: var(--bg-2);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            z-index: 100;
+        }
+
+        .header-brand {
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            opacity: 0.9;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        /* Timer widget in header */
+        .timer-widget {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--bg-3);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 5px 12px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+        }
+
+        .timer-widget .label { color: var(--text-muted); }
+        .timer-widget .time-val { color: var(--text); font-weight: 600; }
+
+        .timer-badge {
+            background: var(--accent-dim);
+            color: var(--accent);
+            border: 1px solid var(--accent-border);
+            border-radius: 6px;
+            padding: 2px 8px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .timer-badge.inactive {
+            background: rgba(255,255,255,0.04);
+            color: var(--text-muted);
+            border-color: var(--border);
+        }
+
+        /* === SIDEBAR === */
+        #app-sidebar {
+            position: fixed;
+            top: var(--header-h);
+            left: 0;
+            width: var(--sidebar-w);
+            height: calc(100vh - var(--header-h));
+            background: var(--bg-2);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 20px 0 16px;
+            z-index: 90;
+        }
+
+        .sidebar-section-label {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            padding: 0 16px;
+            margin-bottom: 8px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 16px;
+            margin: 1px 8px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.15s ease;
+            cursor: pointer;
+        }
+
+        .nav-item:hover {
+            background: var(--bg-3);
+            color: var(--text);
+            text-decoration: none;
+        }
+
+        .nav-item.active {
+            background: var(--accent-dim);
+            color: var(--accent);
+            border: 1px solid var(--accent-border);
+        }
+
+        .nav-item .material-symbols-outlined {
+            font-size: 18px;
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+        }
+
+        .sidebar-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 12px 16px;
+        }
+
+        /* Add server button in sidebar */
+        .sidebar-add-btn {
+            margin: 8px 10px 0;
+            padding: 8px 12px;
+            background: var(--bg-3);
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.15s;
+            text-align: left;
+        }
+
+        .sidebar-add-btn:hover {
+            background: var(--bg-4);
+            border-color: var(--border-light);
+        }
+
+        /* Terminal in sidebar */
+        .sidebar-terminal {
+            margin: auto 10px 0;
+            background: #0a0a0a;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .sidebar-terminal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .sidebar-terminal-title {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--danger);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .sidebar-terminal-clear {
+            font-size: 10px;
+            color: var(--text-muted);
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .sidebar-terminal-clear:hover { color: var(--danger); }
+
+        .sidebar-terminal-log {
+            height: 160px;
+            overflow-y: auto;
+            padding: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        /* === MAIN CONTENT === */
+        #app-main {
+            margin-left: var(--sidebar-w);
+            margin-top: var(--header-h);
+            height: calc(100vh - var(--header-h));
+            overflow-y: auto;
+            padding: 28px 32px;
+            background: var(--bg);
+        }
+
+        /* === CARDS === */
+        .card-dark {
+            background: var(--bg-2);
+            border: 1px solid var(--border);
             border-radius: 12px;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .cyber-card:hover {
-            border-color: rgba(0, 240, 255, 0.3) !important;
-            box-shadow: 0 0 20px rgba(0, 240, 255, 0.08);
+        /* === MODAL OVERRIDES === */
+        .modal-content {
+            background: var(--bg-2) !important;
+            border: 1px solid var(--border-light) !important;
+            color: var(--text) !important;
         }
 
-        .cyber-glow-primary {
-            box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+        .modal-header {
+            border-bottom: 1px solid var(--border) !important;
+            padding: 16px 20px !important;
         }
 
-        .cyber-glow-magenta {
-            box-shadow: 0 0 15px rgba(255, 0, 85, 0.4);
+        .modal-footer {
+            border-top: 1px solid var(--border) !important;
+            padding: 12px 20px !important;
         }
 
-        .terminal-scroll::-webkit-scrollbar {
-            width: 6px;
+        .modal-title {
+            font-size: 14px !important;
+            font-weight: 700 !important;
+            color: var(--text) !important;
         }
 
-        .terminal-scroll::-webkit-scrollbar-track {
-            background: transparent;
+        .btn-close {
+            filter: invert(1) grayscale(100%) brightness(150%);
         }
 
-        .terminal-scroll::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.15);
-            border-radius: 10px;
-        }
-
-        .material-symbols-outlined {
-            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-            vertical-align: middle;
-        }
-
+        /* === STATUS DOTS === */
         .status-dot {
-            width: 8px;
-            height: 8px;
+            width: 7px;
+            height: 7px;
             border-radius: 50%;
             display: inline-block;
-            margin-right: 8px;
+            flex-shrink: 0;
         }
 
-        /* Loading Screen Refresh styling */
+        .status-dot.online { background: var(--success); }
+        .status-dot.offline { background: var(--danger); }
+        .status-dot.running {
+            background: var(--success);
+        }
+
+        /* === CYBER INPUT === */
+        .cyber-input {
+            background: var(--bg-3) !important;
+            border: 1px solid var(--border-light) !important;
+            color: var(--text) !important;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            transition: border-color 0.15s ease;
+        }
+
+        .cyber-input:focus {
+            border-color: var(--accent) !important;
+            box-shadow: 0 0 0 2px var(--accent-dim) !important;
+            outline: none !important;
+            background: var(--bg-3) !important;
+        }
+
+        .cyber-input::placeholder { color: var(--text-dim) !important; }
+
+        /* Remove number input spinners */
+        #globalTimezoneOffsetInput::-webkit-outer-spin-button,
+        #globalTimezoneOffsetInput::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        #globalTimezoneOffsetInput {
+            -moz-appearance: textfield;
+        }
+
+        /* === TERMINAL SCROLLBARS === */
+        .terminal-scroll::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .terminal-scroll::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: 4px;
+        }
+        .terminal-scroll::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .terminal-scroll::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.35);
+        }
+        .terminal-scroll {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.2) rgba(0, 0, 0, 0.25);
+        }
+
+        /* === FONT HELPERS === */
+        .font-cyber-title { font-family: 'Inter', sans-serif; font-weight: 700; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+        /* === NOTIFICATIONS === */
         .loading-screen-refresh {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background-color: rgba(6, 9, 19, 0.95);
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            background-color: rgba(12, 12, 12, 0.95);
             z-index: 9999;
             display: flex;
         }
 
-        /* Adjust bootstrap modals to work with Tailwind and look cyber-premium */
-        .modal-content {
-            background-color: rgba(13, 20, 35, 0.9) !important;
-            backdrop-filter: blur(25px);
-            border: 1px solid rgba(0, 240, 255, 0.25) !important;
-            color: #f8fafc !important;
-            box-shadow: 0 0 30px rgba(0, 240, 255, 0.15) !important;
-        }
-        .modal-header {
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-        }
-        .modal-footer {
-            border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
-        }
-        .btn-close {
-            filter: invert(1) grayscale(100%) brightness(200%);
-        }
-        
-        .timer-badge {
-            background: rgba(0, 240, 255, 0.04);
-            border: 1px solid rgba(0, 240, 255, 0.12);
-            border-radius: 20px;
+        /* === USER INFO === */
+        .user-tag {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
         }
 
-        /* Font styles for neons */
-        .font-cyber-title {
-            font-family: 'Orbitron', sans-serif;
-            letter-spacing: 1px;
+        .logout-btn {
+            color: var(--text-muted);
+            background: none;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            transition: color 0.15s;
+            padding: 4px;
         }
+
+        .logout-btn:hover { color: var(--danger); }
     </style>
 
-    <!-- jQuery, Bootstrap, and SignalR JS -->
+    <!-- jQuery, Bootstrap, SignalR JS -->
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/5.0.7/signalr.min.js"></script>
 </head>
-<body class="overflow-hidden">
+<body>
 
     <!-- Notification Toast Container -->
-    <div id="notification-container" style="position: fixed; top: 80px; right: 20px; z-index: 1050; max-width: 350px;"></div>
+    <div id="notification-container" style="position: fixed; top: 70px; right: 20px; z-index: 1050; max-width: 340px;"></div>
 
     <!-- Notification Sound -->
     <audio id="notification-sound" src="/audio/NotificationExample.mp3" preload="auto"></audio>
 
-    <!-- Top Navigation Bar -->
-    <header class="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-8 h-16 border-b border-white/5 shadow-[0_0_15px_rgba(0,240,255,0.03)]" style="background: rgba(13, 20, 35, 0.85); backdrop-filter: blur(16px);">
-        <div class="flex items-center gap-10">
-            <h1 class="text-lg font-black tracking-widest text-[#00f0ff] uppercase font-cyber-title" style="text-shadow: 0 0 8px rgba(0, 240, 255, 0.3);">SMARTFLOW MULTI-BOT</h1>
-        </div>
+    <!-- ===== HEADER ===== -->
+    <header id="app-header">
+        <span class="header-brand">Smartflow Multi-Bot</span>
 
-        <div class="flex items-center gap-6">
-            <!-- Next run countdown timer widget -->
-            <div id="navbar-timer-widget" class="flex items-center px-4 py-1.5 timer-badge text-[12px] font-mono gap-2 text-white">
-                <span class="material-symbols-outlined text-[#00f0ff] text-[18px]">schedule</span>
-                <span class="text-slate-400">Próxima:</span>
-                <span id="navNextRunText" class="font-bold text-white">--:--:--</span>
-                <span id="navCountdownText" class="px-2.5 py-0.5 bg-[#00f0ff]/15 text-[#00f0ff] border border-[#00f0ff]/30 font-bold rounded-full text-[10px] uppercase">Desactivado</span>
+        <div class="header-right">
+            <!-- Timer widget -->
+            <div id="navbar-timer-widget" class="timer-widget">
+                <span class="material-symbols-outlined" style="font-size:15px;color:var(--text-muted);">schedule</span>
+                <span class="label">Próxima:</span>
+                <span id="navNextRunText" class="time-val">--:--:--</span>
+                <span id="navCountdownText" class="timer-badge inactive">Desactivado</span>
             </div>
 
-            <div class="h-8 w-[1px] bg-white/10 mx-1"></div>
-            
-            <span class="font-cyber-title text-[11px] text-white font-bold tracking-wider">
-                @Context.Request.Cookies["Username"]
-            </span>
-            
+            <div style="width:1px;height:24px;background:var(--border);"></div>
+
+            <span class="user-tag">@Context.Request.Cookies["Username"]</span>
+
             <form asp-controller="Authentication" asp-action="Logout" method="post" id="logoutForm" style="display:none;"></form>
-            <button onclick="document.getElementById('logoutForm').submit(); return false;" class="text-slate-400 hover:text-red-500 transition-colors flex items-center" title="Cerrar Sesión">
-                <span class="material-symbols-outlined text-[20px]">logout</span>
+            <button onclick="document.getElementById('logoutForm').submit(); return false;" class="logout-btn" title="Cerrar Sesión">
+                <span class="material-symbols-outlined" style="font-size:18px;">logout</span>
             </button>
         </div>
     </header>
 
-    <!-- Side Navigation Bar -->
-    <aside class="fixed left-0 top-16 h-[calc(100vh-64px)] w-64 border-r border-white/5 flex flex-col pt-8 pb-4" style="background: rgba(13, 20, 35, 0.85); backdrop-filter: blur(16px);">
-        <nav class="flex-1 space-y-1">
-            <div class="px-6 mb-4">
-                <p class="font-cyber-title text-[10px] text-slate-500 font-bold tracking-widest mb-4">CONTROLES PRINCIPALES</p>
-                <a class="flex items-center gap-3 px-4 py-3 font-cyber-title text-[12px] font-bold tracking-wider uppercase transition-all rounded-r-lg @(ViewContext.RouteData.Values["action"]?.ToString() == "gene" ? "bg-[#00f0ff]/10 text-[#00f0ff] border-l-4 border-[#00f0ff]" : "text-[#94a3b8] hover:bg-white/5 hover:text-white")" href="~/Home/gene">
-                    <span class="material-symbols-outlined text-[20px]">smart_toy</span>
-                    Bot Acarreos
-                </a>
-            </div>
-            <div class="px-6 space-y-1">
-                <a class="flex items-center gap-3 px-4 py-3 font-cyber-title text-[12px] font-bold tracking-wider uppercase transition-all rounded-lg @(ViewContext.RouteData.Values["action"]?.ToString() == "servers" ? "bg-[#00f0ff]/10 text-[#00f0ff] border-l-4 border-[#00f0ff]" : "text-[#94a3b8] hover:bg-white/5 hover:text-white")" href="~/Home/servers">
-                    <span class="material-symbols-outlined text-[20px]">dns</span>
-                    Servidores
-                </a>
-                <a class="flex items-center gap-3 px-4 py-3 font-cyber-title text-[12px] font-bold tracking-wider uppercase transition-all rounded-lg @(ViewContext.RouteData.Values["action"]?.ToString() == "Logs" ? "bg-[#00f0ff]/10 text-[#00f0ff] border-l-4 border-[#00f0ff]" : "text-[#94a3b8] hover:bg-white/5 hover:text-white")" href="~/Home/Logs">
-                    <span class="material-symbols-outlined text-[20px]">receipt_long</span>
-                    System Logs
-                </a>
-            </div>
+    <!-- ===== SIDEBAR ===== -->
+    <aside id="app-sidebar">
+        <div class="sidebar-section-label">Principal</div>
+        <nav>
+            <a class="nav-item @(ViewContext.RouteData.Values["action"]?.ToString() == "gene" ? "active" : "")" href="~/Home/gene">
+                <span class="material-symbols-outlined">smart_toy</span>
+                Bot Acarreos
+            </a>
         </nav>
 
-        <div class="px-6 mb-6">
-            <button onclick="location.href='/Home/servers?add=true'" class="w-full py-3 bg-[#00f0ff] text-slate-950 font-cyber-title text-[11px] font-bold rounded-md flex items-center justify-center gap-2 cyber-glow-primary hover:scale-[0.98] transition-all">
-                <span class="material-symbols-outlined text-[18px]">add</span>
-                ADD SERVER
-            </button>
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-section-label">Configuración</div>
+        <nav style="margin-bottom: 12px;">
+            <a class="nav-item @(ViewContext.RouteData.Values["action"]?.ToString() == "servers" ? "active" : "")" href="~/Home/servers">
+                <span class="material-symbols-outlined">dns</span>
+                Servidores
+            </a>
+            <a class="nav-item @(ViewContext.RouteData.Values["action"]?.ToString() == "Logs" ? "active" : "")" href="~/Home/Logs">
+                <span class="material-symbols-outlined">receipt_long</span>
+                System Logs
+            </a>
+        </nav>
+
+        <div style="padding: 0 16px; margin-bottom: 16px;">
+            <div style="font-size: 10px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">Ajuste Horario</div>
+            <div style="display: flex; align-items: center; gap: 8px; background: var(--bg-3); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px;">
+                <span class="material-symbols-outlined" style="font-size:16px;color:var(--text-muted);">schedule</span>
+                <input type="number" id="globalTimezoneOffsetInput" class="form-control-sm bg-transparent text-light border-0" style="width: 100%; font-size: 13px; outline: none; padding: 0; box-shadow: none;" placeholder="Horas" value="0">
+                <span style="font-size: 11px; color: var(--text-muted); font-weight: 600;">hrs</span>
+            </div>
         </div>
 
-        <!-- Terminal Section Integrated in Sidebar Bottom (Shows Active Server logs) -->
-        <div class="mt-auto px-4">
-            <div class="bg-black/60 border border-white/10 rounded-lg p-3 h-48 flex flex-col">
-                <div class="flex items-center justify-between mb-2">
-                    <span class="font-cyber-title text-[10px] text-[#ff0055] font-bold tracking-wider" id="sidebarTerminalTitle">LOGS: ACTIVE</span>
-                    <button class="text-[10px] text-slate-500 hover:text-red-500 transition-colors" onclick="clearSidebarTerminal()">Limpiar</button>
-                </div>
-                <div class="flex-1 font-mono text-[11px] overflow-y-auto terminal-scroll p-2 bg-black/40 rounded border border-white/5 text-[#f8fafc]" id="sidebarTerminalLog">
-                    <p class="mb-1 text-slate-500">[Sistema] Listo. Selecciona un servidor para ver sus logs en tiempo real.</p>
-                </div>
+        <button onclick="location.href='/Home/servers?add=true'" class="sidebar-add-btn">
+            <span class="material-symbols-outlined" style="font-size:16px;">add</span>
+            Agregar Servidor
+        </button>
+
+        <!-- Mini terminal en el sidebar -->
+        <div class="sidebar-terminal" style="margin-top:12px;">
+            <div class="sidebar-terminal-header">
+                <span class="sidebar-terminal-title" id="sidebarTerminalTitle">LOGS: ACTIVE</span>
+                <button class="sidebar-terminal-clear" onclick="clearSidebarTerminal()">Limpiar</button>
+            </div>
+            <div class="sidebar-terminal-log terminal-scroll" id="sidebarTerminalLog">
+                <p style="color:var(--text-dim);">[Sistema] Listo. Selecciona un servidor para ver sus logs en tiempo real.</p>
             </div>
         </div>
     </aside>
 
-    <!-- Main Content Stage -->
-    <main class="ml-64 mt-16 p-8 h-[calc(100vh-64px)] overflow-y-auto bg-transparent">
+    <!-- ===== MAIN CONTENT ===== -->
+    <main id="app-main">
         @RenderBody()
     </main>
 
     <!-- Screen overlay for processing/loading -->
     <div id="loading-screen-refresh" class="loading-screen-refresh flex-col items-center justify-center" style="display: none;">
         <!-- Barra de progreso superior -->
-        <div class="w-full h-1 bg-white/5 absolute top-0">
-            <div class="h-full bg-[#00f0ff] animate-[pulse_1.5s_infinite]" style="width: 100%;"></div>
+        <div class="w-full h-0.5 bg-white/5 absolute top-0">
+            <div class="h-full bg-blue-500 animate-[pulse_1.5s_infinite]" style="width: 100%;"></div>
         </div>
         <!-- Spinner en el centro -->
-        <div class="spinner-border text-[#00f0ff] mt-4" role="status" style="width: 3rem; height: 3rem;">
+        <div class="spinner-border" role="status" style="width: 2.5rem; height: 2.5rem; color: var(--accent);">
             <span class="visually-hidden">Cargando...</span>
         </div>
-        <p class="text-[#00f0ff] font-cyber-title text-[12px] font-bold tracking-widest mt-4">CARGANDO RECURSOS...</p>
+        <p style="color:var(--accent);font-family:'Inter',sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-top:16px;">Cargando recursos...</p>
     </div>
 
-    <!-- Scripts setup and dynamic functions -->
+    <!-- Scripts setup -->
     <script>
         $(document).ready(function () {
-            // Ocultar loading screen al terminar de cargar
-            $('#loading-screen-refresh').fadeOut(500);
-
-            // Actualizar nombre de servidor activo en la cabecera
+            $('#loading-screen-refresh').fadeOut(400);
             updateHeaderServerName();
 
-            // Escuchar notificaciones del localStorage
             window.addEventListener('storage', function(e) {
                 if (e.key === 'activeServerName') {
                     updateHeaderServerName();
@@ -240,48 +515,65 @@
 
         function updateHeaderServerName() {
             var activeName = localStorage.getItem('activeServerName') || "Sin Seleccionar";
+            var activeServerId = localStorage.getItem('activeServerId');
             $('#sidebarTerminalTitle').text("LOGS: " + activeName.toUpperCase());
+            if (activeServerId) {
+                fetchSidebarLogHistory(activeServerId);
+            } else {
+                $('#sidebarTerminalLog').html('<p style="color:var(--text-dim);">[Sistema] Listo. Selecciona un servidor para ver sus logs en tiempo real.</p>');
+            }
         }
 
-        // Limpiar terminal de la barra lateral
+        function fetchSidebarLogHistory(serverId) {
+            $.get(`/api/sync/logHistory?serverId=${serverId}`, function(logs) {
+                const container = $('#sidebarTerminalLog');
+                container.empty();
+                if (logs && logs.length > 0) {
+                    logs.forEach(function(log) {
+                        const time = new Date(log.timestamp || log.Timestamp);
+                        const timeStr = time.toLocaleTimeString();
+                        const message = log.message || log.Message;
+                        const isError = log.isError || log.IsError;
+                        const color = isError ? 'var(--danger)' : 'var(--text-muted)';
+                        const line = `<p style="margin-bottom:2px;color:${color};">[${timeStr}] ${message}</p>`;
+                        container.append(line);
+                    });
+                    container.scrollTop(container[0].scrollHeight);
+                } else {
+                    container.html('<p style="color:var(--text-dim);">[Consola vacía para este servidor]</p>');
+                }
+            });
+        }
+
         function clearSidebarTerminal() {
-            $('#sidebarTerminalLog').html('<p class="mb-1 text-slate-600 font-mono">[Terminal Limpia]</p>');
+            const activeServerId = localStorage.getItem('activeServerId');
+            $('#sidebarTerminalLog').html('<p style="color:var(--text-dim);">[Terminal Limpia]</p>');
+            if (activeServerId) {
+                $.post(`/api/sync/clearLogHistory?serverId=${activeServerId}`);
+            }
         }
 
-        // Agregar log a la terminal lateral
         function appendSidebarTerminal(message, isError) {
             const container = $('#sidebarTerminalLog');
             const now = new Date();
             const timeStr = now.toLocaleTimeString();
-            const textClass = isError ? 'text-red-500 font-bold' : 'text-slate-300';
-
-            const line = `<p class="mb-1 ${textClass}">[${timeStr}] ${message}</p>`;
+            const color = isError ? 'var(--danger)' : 'var(--text-muted)';
+            const line = `<p style="margin-bottom:2px;color:${color};">[${timeStr}] ${message}</p>`;
             container.append(line);
-
-            // Auto-scroll to bottom
             container.scrollTop(container[0].scrollHeight);
-            
-            // Limit output lines
             const lines = container.find('p');
-            if (lines.length > 50) {
-                lines.first().remove();
-            }
+            if (lines.length > 5000) lines.first().remove();
         }
 
-        // Registrar para recibir logs de la terminal lateral
         window.addEventListener("ServerNotification", function(e) {
             const payload = e.detail;
             if (!payload) return;
-
             const activeServerId = localStorage.getItem('activeServerId');
             if (typeof payload === 'object') {
                 const sId = payload.serverId || payload.ServerId;
                 const message = payload.message || payload.Message;
                 const isError = payload.error || payload.Error;
-
-                if (sId == activeServerId) {
-                    appendSidebarTerminal(message, isError);
-                }
+                if (sId == activeServerId) appendSidebarTerminal(message, isError);
             } else if (typeof payload === 'string') {
                 appendSidebarTerminal(payload, false);
             }

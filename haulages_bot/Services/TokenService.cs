@@ -109,64 +109,107 @@ namespace haulages_bot.Services
                 Timeout = TimeSpan.FromSeconds(15)
             };
             var client = new RestClient(options);
-            var request = new RestRequest("/api/openid/connect/token", Method.Post);
-            request.AddHeader("Content-Type", "application/x-www-form-urlencoded");
 
+            // 1. Intentar primero con Refresh Token si está disponible
             if (!string.IsNullOrEmpty(server.RefreshToken))
             {
-                _logger.LogInformation($"Refrescando token para '{server.Name}' usando RefreshToken...");
-                request.AddParameter("grant_type", "refresh_token");
-                request.AddParameter("refresh_token", server.RefreshToken);
-                request.AddParameter("client_id", server.ClientId);
-                request.AddParameter("client_secret", server.ClientSecret);
+                try
+                {
+                    _logger.LogInformation($"Refrescando token para '{server.Name}' usando RefreshToken...");
+                    var request = new RestRequest("/api/openid/connect/token", Method.Post);
+                    request.AddHeader("Content-Type", "application/x-www-form-urlencoded");
+                    request.AddParameter("grant_type", "refresh_token");
+                    request.AddParameter("refresh_token", server.RefreshToken);
+                    request.AddParameter("client_id", server.ClientId);
+                    request.AddParameter("client_secret", server.ClientSecret);
+
+                    var response = await client.ExecuteAsync(request);
+                    if (response.IsSuccessful)
+                    {
+                        var tokenResponse = JsonConvert.DeserializeObject<TokenResponse>(response.Content);
+                        if (tokenResponse != null && !string.IsNullOrEmpty(tokenResponse.AccessToken))
+                        {
+                            server.AccessToken = tokenResponse.AccessToken;
+                            if (!string.IsNullOrEmpty(tokenResponse.RefreshToken))
+                            {
+                                server.RefreshToken = tokenResponse.RefreshToken;
+                            }
+                            server.TokenExpiry = DateTime.Now.AddSeconds(tokenResponse.ExpiresIn);
+
+                            _context.ServerConfigs.Update(server);
+                            await _context.SaveChangesAsync();
+                            _logger.LogInformation($"Token refrescado exitosamente usando RefreshToken para '{server.Name}'.");
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogWarning($"Fallo al refrescar token con RefreshToken para '{server.Name}' (invalid_grant o similar). Limpiando RefreshToken fallido e intentando password grant... Error: {response.Content}");
+                        // Limpiar refresh token corrupto/expirado para forzar uso de password grant en el siguiente paso
+                        server.RefreshToken = null;
+                        _context.ServerConfigs.Update(server);
+                        await _context.SaveChangesAsync();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning($"Excepción al refrescar token con RefreshToken para '{server.Name}': {ex.Message}. Intentando password grant...");
+                    server.RefreshToken = null;
+                    _context.ServerConfigs.Update(server);
+                    await _context.SaveChangesAsync();
+                }
             }
-            else if (!string.IsNullOrEmpty(server.Username) && !string.IsNullOrEmpty(server.Password))
+
+            // 2. Si no había RefreshToken o el refresh falló y se limpió, usar Password Grant si hay credenciales
+            if (!string.IsNullOrEmpty(server.Username) && !string.IsNullOrEmpty(server.Password))
             {
                 _logger.LogInformation($"Adquiriendo nuevo token para '{server.Name}' con usuario/contraseña...");
+                var request = new RestRequest("/api/openid/connect/token", Method.Post);
+                request.AddHeader("Content-Type", "application/x-www-form-urlencoded");
                 request.AddParameter("grant_type", "password");
                 request.AddParameter("username", server.Username);
                 request.AddParameter("password", server.Password);
                 request.AddParameter("scope", "smartflow IdentityServerApi offline_access");
                 request.AddParameter("client_id", server.ClientId);
                 request.AddParameter("client_secret", server.ClientSecret);
+
+                try
+                {
+                    var response = await client.ExecuteAsync(request);
+                    if (!response.IsSuccessful)
+                    {
+                        _logger.LogError($"Fallo de autenticación para '{server.Name}': {response.ErrorMessage} - {response.Content}");
+                        var detailedError = !string.IsNullOrWhiteSpace(response.ErrorMessage) ? response.ErrorMessage : response.Content;
+                        if (string.IsNullOrWhiteSpace(detailedError)) detailedError = response.StatusDescription;
+                        throw new Exception($"Error de autenticación en '{server.Name}': {detailedError}");
+                    }
+
+                    var tokenResponse = JsonConvert.DeserializeObject<TokenResponse>(response.Content);
+                    if (tokenResponse == null || string.IsNullOrEmpty(tokenResponse.AccessToken))
+                    {
+                        throw new Exception($"La respuesta de autenticación para '{server.Name}' no devolvió un token.");
+                    }
+
+                    server.AccessToken = tokenResponse.AccessToken;
+                    if (!string.IsNullOrEmpty(tokenResponse.RefreshToken))
+                    {
+                        server.RefreshToken = tokenResponse.RefreshToken;
+                    }
+                    server.TokenExpiry = DateTime.Now.AddSeconds(tokenResponse.ExpiresIn);
+
+                    _context.ServerConfigs.Update(server);
+                    await _context.SaveChangesAsync();
+                    _logger.LogInformation($"Token adquirido con usuario/contraseña y guardado para el servidor '{server.Name}'.");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError($"Excepción al adquirir token con usuario/contraseña para el servidor '{server.Name}': {ex.Message}");
+                    throw;
+                }
             }
             else
             {
                 throw new Exception($"No hay credenciales ni refresh token configurados para el servidor '{server.Name}'");
-            }
-
-            try
-            {
-                var response = await client.ExecuteAsync(request);
-                if (!response.IsSuccessful)
-                {
-                    _logger.LogError($"Fallo de autenticación para '{server.Name}': {response.ErrorMessage} - {response.Content}");
-                    var detailedError = !string.IsNullOrWhiteSpace(response.ErrorMessage) ? response.ErrorMessage : response.Content;
-                    if (string.IsNullOrWhiteSpace(detailedError)) detailedError = response.StatusDescription;
-                    throw new Exception($"Error de autenticación en '{server.Name}': {detailedError}");
-                }
-
-                var tokenResponse = JsonConvert.DeserializeObject<TokenResponse>(response.Content);
-                if (tokenResponse == null || string.IsNullOrEmpty(tokenResponse.AccessToken))
-                {
-                    throw new Exception($"La respuesta de autenticación para '{server.Name}' no devolvió un token.");
-                }
-
-                server.AccessToken = tokenResponse.AccessToken;
-                if (!string.IsNullOrEmpty(tokenResponse.RefreshToken))
-                {
-                    server.RefreshToken = tokenResponse.RefreshToken;
-                }
-                server.TokenExpiry = DateTime.Now.AddSeconds(tokenResponse.ExpiresIn);
-
-                _context.ServerConfigs.Update(server);
-                await _context.SaveChangesAsync();
-                _logger.LogInformation($"Token actualizado y guardado correctamente para el servidor '{server.Name}'.");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Excepción al autenticar en el servidor '{server.Name}': {ex.Message}");
-                throw;
             }
         }
 

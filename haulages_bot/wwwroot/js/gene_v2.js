@@ -609,6 +609,21 @@ $(document).ready(function () {
                     materialBadge = `<span class="text-slate-500">-</span>`;
                 }
 
+                // Aplicar offset de zona horaria a la fecha del acarreo
+                let dateDisplay = item.dateofcarries || '';
+                try {
+                    const rawDate = new Date(item.dateofcarries);
+                    if (!isNaN(rawDate.getTime())) {
+                        const tzFn = window.applyTimezoneOffset;
+                        const adjustedDate = tzFn ? tzFn(rawDate) : rawDate;
+                        dateDisplay = adjustedDate.toLocaleString('es-MX', {
+                            year: 'numeric', month: '2-digit', day: '2-digit',
+                            hour: '2-digit', minute: '2-digit', second: '2-digit',
+                            hour12: false
+                        });
+                    }
+                } catch(e) { /* mantener valor original si falla */ }
+
                 const tr = `
                     <tr class="hover:bg-white/5 transition-colors group">
                         <td class="px-6 py-4 font-data-mono text-[13px] text-white">${item.haulageId}</td>
@@ -617,12 +632,13 @@ $(document).ready(function () {
                         <td class="px-6 py-4 font-data-mono text-[13px] text-slate-300">${item.routeDescription || item.pathId}</td>
                         <td class="px-6 py-4 font-data-mono text-[13px]">${materialBadge}</td>
                         <td class="px-6 py-4 font-data-mono text-[13px] text-[#39ff14] font-bold">${item.weight.toFixed(2)}</td>
-                        <td class="px-6 py-4 font-data-mono text-[13px] text-slate-400">${item.dateofcarries}</td>
+                        <td class="px-6 py-4 font-data-mono text-[13px] text-slate-400">${dateDisplay}</td>
                         <td class="px-6 py-4 text-[12px] text-slate-400">${item.comments || ''}</td>
                     </tr>
                 `;
                 tbody.append(tr);
             });
+
         }).fail(function () {
             console.error("Error al obtener histórico de acarreos.");
         });
@@ -712,16 +728,28 @@ $(document).ready(function () {
         tbody.empty();
 
         failedRows.forEach((row, index) => {
+            const errMsg = row.errorMessage || 'Error desconocido';
+            // Row with editable fields
             const tr = `
-                <tr data-row-number="${row.rowNumber}">
-                    <td class="text-center font-monospace">${row.rowNumber || (index + 1)}</td>
-                    <td><input type="text" class="form-control form-control-sm bg-dark text-light border-secondary val-vehicle" value="${row.vehicleCode || ''}"></td>
-                    <td><input type="text" class="form-control form-control-sm bg-dark text-light border-secondary val-employee-name" value="${row.employeeName || ''}"></td>
-                    <td><input type="text" class="form-control form-control-sm bg-dark text-light border-secondary val-route" value="${row.routeDescription || ''}"></td>
-                    <td><input type="number" step="0.01" class="form-control form-control-sm bg-dark text-light border-secondary val-weight" value="${row.weight || 0}"></td>
-                    <td><input type="text" class="form-control form-control-sm bg-dark text-light border-secondary val-material" value="${row.materialName || ''}"></td>
-                    <td><input type="text" class="form-control form-control-sm bg-dark text-light border-secondary val-date" value="${row.dateStr || ''}"></td>
-                    <td class="text-danger small font-monospace">${row.errorMessage || ''}</td>
+                <tr data-row-number="${row.rowNumber}" class="failed-import-row">
+                    <td colspan="8" style="padding:0; border:none;">
+                        <div style="margin: 4px 0; border-radius: 8px; overflow: hidden; border: 1px solid rgba(239,68,68,0.35); background: rgba(239,68,68,0.04);">
+                            <div style="display:flex; align-items:center; gap:10px; padding: 6px 12px; background: rgba(239,68,68,0.10); border-bottom:1px solid rgba(239,68,68,0.2);">
+                                <span style="font-size:13px;">⚠️</span>
+                                <span style="color:#f87171; font-family: 'JetBrains Mono', monospace; font-size:12px; font-weight:700;">Fila ${row.rowNumber || (index + 1)}:</span>
+                                <span style="color:#fca5a5; font-family: 'JetBrains Mono', monospace; font-size:12px; flex:1;">${errMsg}</span>
+                            </div>
+                            <div style="display:grid; grid-template-columns: 60px 1fr 1fr 1fr 90px 1fr 160px; gap:6px; padding:8px 12px; align-items:center;">
+                                <div style="text-align:center; font-family:monospace; font-size:11px; color:#64748b;">${row.rowNumber || (index + 1)}</div>
+                                <input type="text" class="form-control form-control-sm bg-dark text-light border-secondary val-vehicle" placeholder="Vehículo" value="${row.vehicleCode || ''}">
+                                <input type="text" class="form-control form-control-sm bg-dark text-light border-secondary val-employee-name" placeholder="Empleado" value="${row.employeeName || ''}">
+                                <input type="text" class="form-control form-control-sm bg-dark text-light border-secondary val-route" placeholder="Ruta" value="${row.routeDescription || ''}">
+                                <input type="number" step="0.01" class="form-control form-control-sm bg-dark text-light border-secondary val-weight" placeholder="Peso" value="${row.weight || 0}">
+                                <input type="text" class="form-control form-control-sm bg-dark text-light border-secondary val-material" placeholder="Material" value="${row.materialName || ''}">
+                                <input type="text" class="form-control form-control-sm bg-dark text-light border-secondary val-date" placeholder="YYYY-MM-DD HH:MM:SS" value="${row.dateStr || ''}">
+                            </div>
+                        </div>
+                    </td>
                 </tr>
             `;
             tbody.append(tr);
@@ -732,10 +760,9 @@ $(document).ready(function () {
 
     window.submitCorrectedRows = function() {
         const rows = [];
-        $('#correctionTableBody tr').each(function() {
+        $('#correctionTableBody tr.failed-import-row').each(function() {
             const row = {
                 VehicleCode: $(this).find('.val-vehicle').val().trim(),
-                EmployeeNo: "",
                 EmployeeName: $(this).find('.val-employee-name').val().trim(),
                 RouteDescription: $(this).find('.val-route').val().trim(),
                 Weight: parseFloat($(this).find('.val-weight').val()) || 0,
@@ -890,6 +917,13 @@ $(document).ready(function () {
         }
     });
 
+    // Escuchar el evento de cambio global de zona horaria
+    window.addEventListener("GlobalTimezoneChanged", function () {
+        if (activeServerId) {
+            loadHaulageHistory(activeServerId);
+        }
+    });
+
     function hideLoadingScreen() {
         $('#loading-screen').addClass('d-none');
     }
@@ -907,3 +941,11 @@ window.openAddServerModal = function() {
 window.toggleSelectAll = function(listId, checkBool) {
     $(`#${listId} .checkbox-item:visible input[type="checkbox"]`).prop('checked', checkBool).trigger('change');
 };
+
+function showNotificationInPage(type, msg) {
+    if (window.showNotification) {
+        window.showNotification(type, msg);
+    } else {
+        console.log(msg);
+    }
+}

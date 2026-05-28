@@ -703,7 +703,6 @@ $(document).ready(function () {
                 <tr data-row-number="${row.rowNumber}">
                     <td class="text-center font-monospace">${row.rowNumber || (index + 1)}</td>
                     <td><input type="text" class="form-control form-control-sm bg-dark text-light border-secondary val-vehicle" value="${row.vehicleCode || ''}"></td>
-                    <td><input type="text" class="form-control form-control-sm bg-dark text-light border-secondary val-employee-no" value="${row.employeeNo || ''}"></td>
                     <td><input type="text" class="form-control form-control-sm bg-dark text-light border-secondary val-employee-name" value="${row.employeeName || ''}"></td>
                     <td><input type="text" class="form-control form-control-sm bg-dark text-light border-secondary val-route" value="${row.routeDescription || ''}"></td>
                     <td><input type="number" step="0.01" class="form-control form-control-sm bg-dark text-light border-secondary val-weight" value="${row.weight || 0}"></td>
@@ -723,7 +722,6 @@ $(document).ready(function () {
         $('#correctionTableBody tr').each(function() {
             const row = {
                 VehicleCode: $(this).find('.val-vehicle').val().trim(),
-                EmployeeNo: $(this).find('.val-employee-no').val().trim(),
                 EmployeeName: $(this).find('.val-employee-name').val().trim(),
                 RouteDescription: $(this).find('.val-route').val().trim(),
                 Weight: parseFloat($(this).find('.val-weight').val()) || 0,

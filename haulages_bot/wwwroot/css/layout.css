@@ -2,25 +2,22 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Orbitron:wght@400;700;900&display=swap');
 
 :root {
-    --bg-main: #060913;
-    --card-bg: rgba(13, 20, 35, 0.65);
-    --card-border: rgba(255, 255, 255, 0.08);
-    --sidebar-bg: rgba(11, 16, 28, 0.85);
+    --bg-main: #001828;
+    --card-bg: #002b49;
+    --card-border: rgba(193, 197, 200, 0.15);
+    --sidebar-bg: #002237;
     --text-primary: #f8fafc;
-    --text-secondary: #94a3b8;
-    --neon-cyan: #00f0ff;
-    --neon-pink: #ff0055;
-    --neon-purple: #bc34fa;
-    --neon-green: #39ff14;
-    --font-sans: 'Outfit', sans-serif;
-    --font-future: 'Orbitron', sans-serif;
+    --text-secondary: #c1c5c8;
+    --neon-cyan: #0a5da7;
+    --neon-pink: #ef4444;
+    --neon-purple: #36b0c9;
+    --neon-green: #22c55e;
+    --font-sans: 'Inter', sans-serif;
+    --font-future: 'Inter', sans-serif;
 }
 
 body {
     background-color: var(--bg-main) !important;
-    background-image: 
-        radial-gradient(circle at 5% 5%, rgba(188, 52, 250, 0.05) 0%, rgba(5, 7, 12, 0) 30%),
-        radial-gradient(circle at 95% 95%, rgba(0, 240, 255, 0.04) 0%, rgba(5, 7, 12, 0) 40%) !important;
     color: var(--text-primary) !important;
     font-family: var(--font-sans) !important;
     min-height: 100vh;
@@ -64,9 +61,8 @@ body {
 }
 
 .sidebar a:hover {
-    background: rgba(0, 240, 255, 0.08);
+    background: rgba(10, 93, 167, 0.15);
     color: var(--neon-cyan);
-    text-shadow: 0 0 5px rgba(0, 240, 255, 0.5);
     border-left-color: var(--neon-cyan);
     padding-left: 28px;
 }
@@ -101,7 +97,7 @@ body {
     left: 0;
     width: 100%;
     height: 70px;
-    background: rgba(13, 20, 35, 0.8) !important;
+    background: var(--sidebar-bg) !important;
     backdrop-filter: blur(16px);
     border-bottom: 1px solid var(--card-border) !important;
     z-index: 1030;
@@ -110,7 +106,6 @@ body {
 
 .navbar-brand img {
     height: 38px;
-    filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.4));
 }
 
 .btn-dark {
@@ -121,10 +116,9 @@ body {
 }
 
 .btn-dark:hover {
-    background: rgba(0, 240, 255, 0.1);
+    background: rgba(10, 93, 167, 0.15);
     border-color: var(--neon-cyan);
     color: var(--neon-cyan);
-    box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
 }
 
 /* Refresh / Loading overlay */
@@ -157,7 +151,6 @@ body {
     width: 0;
     height: 100%;
     background-color: var(--neon-cyan);
-    box-shadow: 0 0 8px var(--neon-cyan);
     animation: loadProgress 2s ease infinite;
 }
 
@@ -197,7 +190,6 @@ body {
 #notificationBell:hover {
     border-color: var(--neon-cyan);
     color: var(--neon-cyan);
-    box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
 }
 
 .notification-popup {
@@ -205,9 +197,9 @@ body {
     top: 80px;
     right: 20px;
     width: 360px;
-    background: rgba(13, 20, 35, 0.85) !important;
+    background: var(--card-bg) !important;
     backdrop-filter: blur(25px);
-    border: 1px solid rgba(0, 240, 255, 0.25) !important;
+    border: 1px solid var(--card-border) !important;
     border-radius: 12px;
     z-index: 1050;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
@@ -269,21 +261,19 @@ body {
 #currentDateTime, #nextRunTimeFixed, #nextRunTimer {
     font-size: 0.9rem;
     font-weight: 600;
-    background: rgba(0, 240, 255, 0.06);
-    border: 1px solid rgba(0, 240, 255, 0.15);
+    background: rgba(10, 93, 167, 0.08);
+    border: 1px solid rgba(10, 93, 167, 0.2);
     color: var(--neon-cyan);
     padding: 6px 12px;
     border-radius: 6px;
     width: fit-content;
     margin: 0 auto;
-    text-shadow: 0 0 5px rgba(0, 240, 255, 0.4);
 }
 
 #nextRunTimer {
-    background: rgba(188, 52, 250, 0.06);
-    border-color: rgba(188, 52, 250, 0.15);
+    background: rgba(54, 176, 201, 0.08);
+    border-color: rgba(54, 176, 201, 0.2);
     color: var(--neon-purple);
-    text-shadow: 0 0 5px rgba(188, 52, 250, 0.4);
 }
 
 /* Bootstrap Alert Overrides (SignalR Toast Notifications) */

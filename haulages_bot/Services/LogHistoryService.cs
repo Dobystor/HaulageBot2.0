@@ -22,7 +22,7 @@ namespace haulages_bot.Services
             lock (list)
             {
                 list.Add(new LogMessage { Message = message, IsError = isError });
-                if (list.Count > 100)
+                if (list.Count > 5000)
                 {
                     list.RemoveAt(0);
                 }

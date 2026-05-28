@@ -144,6 +144,8 @@ namespace haulages_bot.Services
                 catch (Exception ex)
                 {
                     _logger.LogError($"Excepción al registrar acarreo manual en {server.Name}: {ex.Message}");
+                    _logHistoryService.AddLog(serverId, $"Error en bot manual: {ex.Message}", true);
+                    await _notificationHubContext.Clients.All.SendAsync("ReceiveNotification", new { ServerId = serverId, Error = true, Message = $"Error bot manual: {ex.Message}" });
                     throw;
                 }
             }

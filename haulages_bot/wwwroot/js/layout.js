@@ -1,5 +1,69 @@
 document.addEventListener("DOMContentLoaded", function () {
-    fetchNextRunTime(); // Obtener y mostrar la próxima ejecución al cargar
+    let _tzOffsetHours = 0; // Se carga del API al inicializar
+
+    // Cargar offset de zona horaria al inicializar
+    async function loadTimezoneOffset() {
+        let savedOffset = localStorage.getItem('globalTimezoneOffset');
+        if (savedOffset !== null) {
+            _tzOffsetHours = parseInt(savedOffset, 10);
+            if (isNaN(_tzOffsetHours)) _tzOffsetHours = 0;
+            
+            // Sincronizar el input en la barra lateral
+            const input = document.getElementById('globalTimezoneOffsetInput');
+            if (input) input.value = _tzOffsetHours;
+            return;
+        }
+
+        const activeServerId = localStorage.getItem('activeServerId');
+        try {
+            const url = activeServerId
+                ? `/api/ServerConfig/timezone?serverId=${activeServerId}`
+                : `/api/ServerConfig/timezone`;
+            const res = await fetch(url);
+            if (res.ok) {
+                const data = await res.json();
+                _tzOffsetHours = data.offsetHours || 0;
+                localStorage.setItem('globalTimezoneOffset', _tzOffsetHours);
+                
+                // Sincronizar el input en la barra lateral
+                const input = document.getElementById('globalTimezoneOffsetInput');
+                if (input) input.value = _tzOffsetHours;
+            }
+        } catch(e) {
+            console.warn('No se pudo cargar el offset de timezone:', e);
+        }
+    }
+
+    // Helper: aplica el offset al objeto Date (devuelve nuevo Date)
+    function applyTimezoneOffset(date) {
+        if (!date || isNaN(date.getTime())) return date;
+        return new Date(date.getTime() + _tzOffsetHours * 60 * 60 * 1000);
+    }
+    // Exponer globalmente para que gene_v2.js pueda usarlo
+    window.applyTimezoneOffset = applyTimezoneOffset;
+    window.getTimezoneOffsetHours = () => _tzOffsetHours;
+
+    // Escuchar cambios en el input de timezone
+    const tzInput = document.getElementById('globalTimezoneOffsetInput');
+    if (tzInput) {
+        tzInput.addEventListener('change', function () {
+            let val = parseInt(this.value, 10);
+            if (isNaN(val)) val = 0;
+            this.value = val;
+            _tzOffsetHours = val;
+            localStorage.setItem('globalTimezoneOffset', val);
+            
+            // Refrescar el timer
+            fetchNextRunTime();
+            
+            // Notificar a otras vistas
+            const event = new CustomEvent("GlobalTimezoneChanged", { detail: { offsetHours: val } });
+            window.dispatchEvent(event);
+        });
+    }
+
+    // Iniciar cargando timezone y luego la próxima ejecución
+    loadTimezoneOffset().then(() => fetchNextRunTime());
 
     const loadingScreen = document.getElementById("loading-screen-refresh");
     const content = document.querySelector(".content");
@@ -53,11 +117,15 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
+        // Re-cargar offset por si cambió el servidor activo
+        await loadTimezoneOffset();
+
         try {
             const response = await fetch(`/api/sync/nextRunTime?serverId=${activeServerId}`);
             if (response.ok) {
                 const data = await response.json();
-                const nextRunTime = new Date(data.nextRunTime);
+                const rawDate = new Date(data.nextRunTime);
+                const nextRunTime = applyTimezoneOffset(rawDate);
                 updateNextRunTimer(nextRunTime);
             } else {
                 updateTimerUI(null, "Desactivado");
@@ -87,7 +155,7 @@ document.addEventListener("DOMContentLoaded", function () {
             if (nextRunTimeFixed) nextRunTimeFixed.innerText = `${formattedDate} - ${formattedTime}`;
             
             if (navCountdownText) {
-                navCountdownText.className = "px-2.5 py-0.5 bg-[#00f0ff]/15 text-[#00f0ff] border border-[#00f0ff]/30 font-bold rounded-full text-[10px] uppercase";
+                navCountdownText.className = "px-2.5 py-0.5 bg-[#36b0c9]/15 text-[#36b0c9] border border-[#36b0c9]/30 font-bold rounded-full text-[10px] uppercase";
                 navCountdownText.innerText = countdownText;
                 navCountdownText.style.color = "";
             }
@@ -202,14 +270,15 @@ document.addEventListener("DOMContentLoaded", function () {
                     nextRunDate.setDate(nextRunDate.getDate() + 1);
                 }
             }
-            updateNextRunTimer(nextRunDate);
+            // Aplicar offset de zona horaria
+            updateNextRunTimer(applyTimezoneOffset(nextRunDate));
         }
     });
 
     connection.start().catch((err) => console.error(err));
 
-    // Ejecutar inicial al cargar para pintar la próxima del servidor activo
-    fetchNextRunTime();
+    // Registrar globalmente para que gene.js pueda dispararlo al cambiar de servidor
+    window.refreshLayoutTimer = () => loadTimezoneOffset().then(() => fetchNextRunTime());
 });
 
 // Función para mostrar/ocultar el sidebar

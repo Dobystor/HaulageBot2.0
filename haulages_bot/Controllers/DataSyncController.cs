@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using haulages_bot.Services;
 using haulages_bot.Data;
 using System.Threading.Tasks;
+using System.Threading;
 using System;
 using System.Linq;
 using System.Collections.Generic;
@@ -91,14 +92,26 @@ namespace haulages_bot.Controllers
         [HttpPost("manuallocal")]
         public async Task<IActionResult> SyncData([FromQuery] int serverId)
         {
+            var server = await _dbContext.ServerConfigs.FindAsync(serverId);
+            var serverName = server?.Name ?? $"Servidor {serverId}";
             try
             {
+                _logHistoryService.AddLog(serverId, $"Iniciando sincronización local de catálogos para '{serverName}'...");
+                await _notificationHubContext.Clients.All.SendAsync("ReceiveNotification", new { ServerId = serverId, Message = "Iniciando sincronización local de catálogos..." });
+
                 await _dataSyncManualService.SyncData(serverId);
+
+                _logHistoryService.AddLog(serverId, "Sincronización local de catálogos completada exitosamente.");
+                await _notificationHubContext.Clients.All.SendAsync("ReceiveNotification", new { ServerId = serverId, Message = "Sincronización local de catálogos completada exitosamente." });
+
                 return Ok(new { success = true, message = "Sincronización completada exitosamente." });
             }
             catch (Exception ex)
             {
-                return BadRequest(new { success = false, message = $"Error en la sincronización: {ex.Message}" });
+                var errorMsg = $"Error en la sincronización de catálogos: {ex.Message}";
+                _logHistoryService.AddLog(serverId, errorMsg, true);
+                await _notificationHubContext.Clients.All.SendAsync("ReceiveNotification", new { ServerId = serverId, Error = true, Message = errorMsg });
+                return BadRequest(new { success = false, message = errorMsg });
             }
         }
 
@@ -262,6 +275,7 @@ namespace haulages_bot.Controllers
             {
                 int processed = 0;
                 int failed = 0;
+                int completedCount = 0;
                 try
                 {
                     using (var scope = _serviceScopeFactory.CreateScope())
@@ -273,103 +287,156 @@ namespace haulages_bot.Controllers
                         var host = server.ApiUrl.StartsWith("http") ? server.ApiUrl : $"https://{server.ApiUrl}";
                         var apiEndpoint = $"{host}/service/haulages/api/v2/manualhaulages/manual/add";
 
+                        // Obtener token actual una sola vez (si ha expirado se refresca automáticamente)
+                        var currentToken = await tokenService.GetTokenAsync(request.ServerId);
+                        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", currentToken);
+
+                        using var semaphore = new SemaphoreSlim(10);
+                        var tasks = new List<Task>();
+                        var successfulHaulages = new System.Collections.Concurrent.ConcurrentBag<Haulage>();
+                        object lockObj = new object();
+
                         for (int i = 0; i < n; i++)
                         {
-                            try
+                            int index = i;
+                            await semaphore.WaitAsync();
+                            tasks.Add(Task.Run(async () =>
                             {
-                                // Obtener token actual (si ha expirado se refresca automáticamente)
-                                var currentToken = await tokenService.GetTokenAsync(request.ServerId);
-                                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", currentToken);
-
-                                int routeId = selectedRoutes[random.Next(selectedRoutes.Count)];
-                                int employeeId = selectedEmployees[random.Next(selectedEmployees.Count)];
-                                var item = weightsAndVehicles[i];
-                                int vehicleId = item.Vehicle.VehicleId;
-                                decimal weight = item.Weight;
-                                DateTime dateOfCarry = dates[i];
-
-                                // Resolver materialTypeId en base al tipo de material de la ruta seleccionada
-                                int resolvedMaterialTypeId = mineralId;
-                                if (routes.TryGetValue(routeId, out var routeDetail))
+                                try
                                 {
-                                    int specificEsterilId = desmonteId;
-                                    if (routeDetail.materialTypeId.HasValue && routeDetail.materialTypeId.Value != 0 && routeDetail.materialTypeId.Value != mineralId)
+                                    int routeId;
+                                    int employeeId;
+                                    lock (lockObj)
                                     {
-                                        specificEsterilId = routeDetail.materialTypeId.Value;
+                                        routeId = selectedRoutes[random.Next(selectedRoutes.Count)];
+                                        employeeId = selectedEmployees[random.Next(selectedEmployees.Count)];
                                     }
-
-                                    switch (routeDetail.selectedMaterialType)
-                                    {
-                                        case 1:
-                                            resolvedMaterialTypeId = specificEsterilId;
-                                            break;
-                                        case 2:
-                                            resolvedMaterialTypeId = random.Next(2) == 0 ? mineralId : specificEsterilId;
-                                            break;
-                                        case 0:
-                                        default:
-                                            resolvedMaterialTypeId = mineralId;
-                                            break;
-                                    }
-                                }
-
-                                var acarreo = new
-                                {
-                                    VehicleId = vehicleId,
-                                    EmployeeId = employeeId,
-                                    PathId = routeId,
-                                    Weight = weight,
-                                    Date = dateOfCarry,
-                                    Comments = "Importación Masiva Rango Fechas",
-                                    materialTypeId = resolvedMaterialTypeId
-                                };
-
-                                var jsonContent = JsonConvert.SerializeObject(acarreo);
-                                var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
-
-                                var response = await client.PostAsync(apiEndpoint, content);
-                                if (response.IsSuccessStatusCode)
-                                {
-                                    processed++;
                                     
-                                    // Guardar en la BD local
-                                    db.Haulages.Add(new Haulage
+                                    var item = weightsAndVehicles[index];
+                                    int vehicleId = item.Vehicle.VehicleId;
+                                    decimal weight = item.Weight;
+                                    DateTime dateOfCarry = dates[index];
+
+                                    // Resolver materialTypeId en base al tipo de material de la ruta seleccionada
+                                    int resolvedMaterialTypeId = mineralId;
+                                    if (routes.TryGetValue(routeId, out var routeDetail))
+                                    {
+                                        int specificEsterilId = desmonteId;
+                                        if (routeDetail.materialTypeId.HasValue && routeDetail.materialTypeId.Value != 0 && routeDetail.materialTypeId.Value != mineralId)
+                                        {
+                                            specificEsterilId = routeDetail.materialTypeId.Value;
+                                        }
+
+                                        switch (routeDetail.selectedMaterialType)
+                                        {
+                                            case 1:
+                                                resolvedMaterialTypeId = specificEsterilId;
+                                                break;
+                                            case 2:
+                                                bool pickMineral;
+                                                lock (lockObj)
+                                                {
+                                                    pickMineral = random.Next(2) == 0;
+                                                }
+                                                resolvedMaterialTypeId = pickMineral ? mineralId : specificEsterilId;
+                                                break;
+                                            case 0:
+                                            default:
+                                                resolvedMaterialTypeId = mineralId;
+                                                break;
+                                        }
+                                    }
+
+                                    var acarreo = new
                                     {
                                         VehicleId = vehicleId,
                                         EmployeeId = employeeId,
                                         PathId = routeId,
                                         Weight = weight,
+                                        Date = dateOfCarry,
                                         Comments = "Importación Masiva Rango Fechas",
-                                        materialTypeId = resolvedMaterialTypeId,
-                                        ServerConfigId = request.ServerId,
-                                        Dateofcarries = dateOfCarry.ToString("yyyy-MM-dd HH:mm:ss")
-                                    });
-                                    await db.SaveChangesAsync();
-                                }
-                                else
-                                {
-                                    failed++;
-                                    var errorResponse = await response.Content.ReadAsStringAsync();
-                                    Console.WriteLine($"Error al registrar acarreo masivo {i}: Código {response.StatusCode} - {errorResponse}");
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                failed++;
-                                Console.WriteLine($"Error en importación masiva elemento {i}: {ex.Message}");
-                            }
+                                        materialTypeId = resolvedMaterialTypeId
+                                    };
 
-                            // Notificar progreso cada 10 registros o al final
-                            if ((i + 1) % 10 == 0 || i == n - 1)
-                            {
-                                var progMsg = $"Progreso importación masiva: {i + 1} de {n} procesados. (Exitosos: {processed}, Fallidos: {failed})";
-                                _logHistoryService.AddLog(request.ServerId, progMsg);
-                                await _notificationHubContext.Clients.All.SendAsync("ReceiveNotification", new
+                                    var jsonContent = JsonConvert.SerializeObject(acarreo);
+                                    var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+
+                                    var response = await client.PostAsync(apiEndpoint, content);
+                                    if (response.IsSuccessStatusCode)
+                                    {
+                                        lock (lockObj)
+                                        {
+                                            processed++;
+                                        }
+                                        
+                                        successfulHaulages.Add(new Haulage
+                                        {
+                                            VehicleId = vehicleId,
+                                            EmployeeId = employeeId,
+                                            PathId = routeId,
+                                            Weight = weight,
+                                            Comments = "Importación Masiva Rango Fechas",
+                                            materialTypeId = resolvedMaterialTypeId,
+                                            ServerConfigId = request.ServerId,
+                                            Dateofcarries = dateOfCarry.ToString("yyyy-MM-dd HH:mm:ss")
+                                        });
+                                    }
+                                    else
+                                    {
+                                        lock (lockObj)
+                                        {
+                                            failed++;
+                                        }
+                                        var errorResponse = await response.Content.ReadAsStringAsync();
+                                        Console.WriteLine($"Error al registrar acarreo masivo {index}: Código {response.StatusCode} - {errorResponse}");
+                                    }
+                                }
+                                catch (Exception ex)
                                 {
-                                    ServerId = request.ServerId,
-                                    Message = progMsg
-                                });
+                                    lock (lockObj)
+                                    {
+                                        failed++;
+                                    }
+                                    Console.WriteLine($"Error en importación masiva elemento {index}: {ex.Message}");
+                                }
+                                finally
+                                {
+                                    int currentCompleted;
+                                    int currentProcessed;
+                                    int currentFailed;
+                                    lock (lockObj)
+                                    {
+                                        completedCount++;
+                                        currentCompleted = completedCount;
+                                        currentProcessed = processed;
+                                        currentFailed = failed;
+                                    }
+                                    
+                                    if (currentCompleted % 10 == 0 || currentCompleted == n)
+                                    {
+                                        var progMsg = $"Progreso importación masiva: {currentCompleted} de {n} procesados. (Exitosos: {currentProcessed}, Fallidos: {currentFailed})";
+                                        _logHistoryService.AddLog(request.ServerId, progMsg);
+                                        await _notificationHubContext.Clients.All.SendAsync("ReceiveNotification", new
+                                        {
+                                            ServerId = request.ServerId,
+                                            Message = progMsg
+                                        });
+                                    }
+                                    semaphore.Release();
+                                }
+                            }));
+                        }
+
+                        await Task.WhenAll(tasks);
+
+                        // Guardar todos los acarreos exitosos en una sola transacción
+                        if (!successfulHaulages.IsEmpty)
+                        {
+                            foreach (var Mathaul in successfulHaulages)
+                            {
+                                db.Haulages.Add(Mathaul);
                             }
+                            await db.SaveChangesAsync();
                         }
 
                         var finMsg = $"Importación masiva finalizada. Total: {n}, Exitosos: {processed}, Fallidos: {failed}";

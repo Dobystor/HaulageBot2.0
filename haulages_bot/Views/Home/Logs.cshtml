@@ -5,15 +5,15 @@
 
 <style>
     .font-cyber-title {
-        font-family: 'Orbitron', sans-serif;
+        font-family: 'Inter', sans-serif;
     }
 </style>
 
 <div class="container-fluid py-4">
     <div class="flex justify-between items-center mb-8">
         <div>
-            <h2 class="font-cyber-title text-2xl font-bold tracking-tight text-[#00f0ff]" style="text-shadow: 0 0 5px rgba(0, 240, 255, 0.3);">
-                <span class="material-symbols-outlined text-[#00f0ff] mr-2 text-3xl">receipt_long</span> SYSTEM LOGS
+            <h2 class="font-cyber-title text-2xl font-bold tracking-tight text-white">
+                <span class="material-symbols-outlined text-[#36b0c9] mr-2 text-3xl">receipt_long</span> SYSTEM LOGS
             </h2>
             <p class="text-slate-300 text-sm mt-1 font-medium">Consolas de registro en vivo independientes para cada servidor y bot configurado.</p>
         </div>
@@ -53,7 +53,7 @@
                 }
 
                 servers.forEach(function(server) {
-                    const statusClass = server.isBotRunning ? 'bg-[#39ff14] animate-pulse shadow-[0_0_8px_#39ff14]' : 'bg-slate-500';
+                    const statusClass = server.isBotRunning ? 'bg-[#22c55e]' : 'bg-slate-500';
                     const panel = `
                         <div class="cyber-card rounded-lg p-6 flex flex-col h-[450px]" id="terminal-card-${server.id}">
                             <div class="flex items-center justify-between mb-4 border-b border-white/10 pb-3">
@@ -123,7 +123,7 @@
 
             // Control de líneas máximas en consola
             const lines = container.find('p');
-            if (lines.length > 100) {
+            if (lines.length > 5000) {
                 lines.first().remove();
             }
         }

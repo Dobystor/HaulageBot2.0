@@ -410,3 +410,8 @@ vars.env
 docker-compose*
 .env
 SmartFlow/
+
+# Base de datos SQLite local — NO subir al repo, es local por instancia
+*.db
+*.db-shm
+*.db-wal

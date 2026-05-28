@@ -10,47 +10,42 @@
 <style>
     /* Styling overrides for active items */
     .checkbox-item input[type="checkbox"]:checked + label {
-        color: #00f2ff !important;
-        text-shadow: 0 0 5px rgba(0, 242, 255, 0.4);
+        color: var(--accent-teal) !important;
     }
     .font-cyber-title {
-        font-family: 'Orbitron', sans-serif;
+        font-family: 'Inter', sans-serif;
     }
 
     /* Botones de filtro de material para rutas */
     .route-mat-btn {
         color: rgba(150, 170, 200, 0.7);
-        border-color: rgba(150, 170, 200, 0.2);
+        border-color: #333;
         background: rgba(150, 170, 200, 0.05);
-        transition: all 0.2s ease;
+        transition: all 0.15s ease;
         cursor: pointer;
     }
     .route-mat-btn:hover {
         opacity: 0.85;
     }
     .route-mat-btn.active[data-mat="all"] {
-        color: #00f0ff;
-        border-color: rgba(0,240,255,0.5);
-        background: rgba(0,240,255,0.12);
-        box-shadow: 0 0 6px rgba(0,240,255,0.2);
+        color: #3b82f6;
+        border-color: rgba(59,130,246,0.5);
+        background: rgba(59,130,246,0.12);
     }
     .route-mat-btn.active[data-mat="1"] {
-        color: #ffd700;
-        border-color: rgba(255,215,0,0.6);
-        background: rgba(255,215,0,0.15);
-        box-shadow: 0 0 6px rgba(255,215,0,0.2);
+        color: #f59e0b;
+        border-color: rgba(245,158,11,0.5);
+        background: rgba(245,158,11,0.12);
     }
     .route-mat-btn.active[data-mat="2"] {
-        color: #ff6432;
-        border-color: rgba(255,100,50,0.6);
-        background: rgba(255,100,50,0.15);
-        box-shadow: 0 0 6px rgba(255,100,50,0.2);
+        color: #ef4444;
+        border-color: rgba(239,68,68,0.5);
+        background: rgba(239,68,68,0.12);
     }
     .route-mat-btn.active[data-mat="3"] {
-        color: #00c8b4;
-        border-color: rgba(0,200,180,0.6);
-        background: rgba(0,200,180,0.15);
-        box-shadow: 0 0 6px rgba(0,200,180,0.2);
+        color: #22c55e;
+        border-color: rgba(34,197,94,0.5);
+        background: rgba(34,197,94,0.12);
     }
 
     /* Inputs matching high readability */
@@ -63,8 +58,8 @@
         transition: all 0.3s ease;
     }
     .cyber-input:focus {
-        border-color: #00f0ff !important;
-        box-shadow: 0 0 8px rgba(0, 240, 255, 0.3) !important;
+        border-color: var(--accent) !important;
+        box-shadow: 0 0 0 2px var(--accent-dim) !important;
         outline: none !important;
     }
 
@@ -85,12 +80,11 @@
 
     /* Custom premium dark/neon Flatpickr style overrides */
     .flatpickr-calendar {
-        background: rgba(13, 20, 35, 0.95) !important;
-        backdrop-filter: blur(20px) !important;
-        border: 1px solid rgba(0, 240, 255, 0.3) !important;
-        box-shadow: 0 10px 30px rgba(0, 240, 255, 0.15) !important;
+        background: var(--bg-3) !important;
+        border: 1px solid var(--border) !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
         border-radius: 12px !important;
-        font-family: 'Outfit', sans-serif !important;
+        font-family: 'Inter', sans-serif !important;
     }
     .flatpickr-calendar.arrowTop:before {
         border-bottom-color: rgba(0, 240, 255, 0.3) !important;
@@ -107,7 +101,7 @@
         color: #ffffff !important;
     }
     .flatpickr-current-month {
-        font-family: 'Orbitron', sans-serif !important;
+        font-family: 'Inter', sans-serif !important;
         font-weight: 700 !important;
         text-transform: uppercase !important;
         color: #ffffff !important;
@@ -127,8 +121,8 @@
         border-top-color: #ffffff !important;
     }
     .flatpickr-weekday {
-        color: #00f0ff !important;
-        font-family: 'Orbitron', sans-serif !important;
+        color: var(--accent-teal) !important;
+        font-family: 'Inter', sans-serif !important;
         font-weight: 700 !important;
         font-size: 10px !important;
         letter-spacing: 0.5px !important;
@@ -147,35 +141,33 @@
         color: rgba(255, 255, 255, 0.25) !important;
     }
     .flatpickr-day.today {
-        border-color: #ff0055 !important;
-        color: #ff0055 !important;
+        border-color: var(--accent) !important;
+        color: var(--accent) !important;
         font-weight: bold !important;
-        box-shadow: 0 0 5px rgba(255, 0, 85, 0.3) !important;
     }
     .flatpickr-day.today:hover {
-        background: rgba(255, 0, 85, 0.1) !important;
-        color: #ff0055 !important;
+        background: var(--accent-dim) !important;
+        color: var(--accent) !important;
     }
     .flatpickr-day:hover, .flatpickr-day.prevMonthDay:hover, .flatpickr-day.nextMonthDay:hover {
-        background: rgba(0, 240, 255, 0.1) !important;
-        color: #00f0ff !important;
-        border-color: rgba(0, 240, 255, 0.3) !important;
+        background: var(--accent-dim) !important;
+        color: var(--accent-teal) !important;
+        border-color: var(--accent-border) !important;
     }
     .flatpickr-day.selected, .flatpickr-day.selected:hover,
     .flatpickr-day.startRange, .flatpickr-day.endRange {
-        background: linear-gradient(135deg, #00f0ff 0%, #bc34fa 100%) !important;
-        color: #000000 !important;
+        background: var(--accent) !important;
+        color: #ffffff !important;
         font-weight: 800 !important;
         border-color: transparent !important;
-        box-shadow: 0 0 12px rgba(0, 240, 255, 0.5) !important;
     }
     .flatpickr-time {
         border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
-        background: rgba(13, 20, 35, 0.95) !important;
+        background: var(--bg-3) !important;
         border-radius: 0 0 12px 12px !important;
     }
     .flatpickr-time input {
-        color: #00f0ff !important;
+        color: var(--accent-teal) !important;
         font-family: 'JetBrains Mono', monospace !important;
         font-weight: 700 !important;
         font-size: 14px !important;
@@ -194,7 +186,7 @@
     }
     .flatpickr-time .flatpickr-am-pm {
         color: #ffffff !important;
-        font-family: 'Orbitron', sans-serif !important;
+        font-family: 'Inter', sans-serif !important;
         font-weight: 700 !important;
     }
 
@@ -205,6 +197,15 @@
     }
     .checkbox-item input[type="checkbox"] {
         margin-top: 3px !important;
+    }
+    /* Configuration section card header color */
+    .cyber-card {
+        background: var(--bg-2) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 10px;
+    }
+    .cyber-card:hover {
+        border-color: #333333 !important;
     }
 
     /* Server Tabs Styles Overrides for Ultra Premium look */
@@ -218,17 +219,17 @@
     }
     
     .server-tab {
-        background: rgba(13, 20, 35, 0.6) !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        background: var(--bg-3) !important;
+        border: 1px solid var(--border) !important;
         border-radius: 8px !important;
         padding: 10px 20px !important;
-        color: #94a3b8 !important;
+        color: var(--text-muted) !important;
         cursor: pointer;
-        font-family: 'Orbitron', sans-serif !important;
+        font-family: 'Inter', sans-serif !important;
         font-weight: 700 !important;
         font-size: 0.85rem !important;
         letter-spacing: 0.5px;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        transition: all 0.2s ease !important;
         display: flex;
         align-items: center;
         gap: 8px;
@@ -480,6 +481,7 @@
                             </div>
                         </div>
 
+
                         <div class="space-y-4">
                             <div class="flex items-center justify-between">
                                 <div>
@@ -661,22 +663,23 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p class="text-slate-300 small mb-4">Las siguientes filas presentaron errores durante la importación. Corrige los campos erróneos directamente en la tabla y presiona "Importar Corregidos".</p>
-                
-                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
-                    <table class="table table-dark table-hover table-bordered align-middle text-light" id="correctionTable">
-                        <thead>
-                            <tr class="table-active border-secondary text-[#00f0ff] text-[11px] font-cyber-title font-bold tracking-wider">
-                                <th style="width: 50px;">Fila</th>
-                                <th>Vehículo (No. Económico)</th>
-                                <th>Empleado (Nombre Completo)</th>
-                                <th>Ruta (Descripción)</th>
-                                <th style="width: 100px;">Peso (t)</th>
-                                <th>Material (Nombre)</th>
-                                <th style="width: 170px;">Fecha (YYYY-MM-DD HH:MM:SS)</th>
-                                <th>Detalle del Error</th>
-                            </tr>
-                        </thead>
+                <div class="flex items-center gap-3 mb-4 p-3 rounded-lg" style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);">
+                    <span class="material-symbols-outlined text-red-400">error</span>
+                    <p class="text-slate-300 small mb-0">Las filas a continuación fallaron en la importación. El motivo del error aparece destacado en <span class="text-red-400 font-bold">rojo</span> encima de cada una. Corrígelas directamente y presiona <strong>"Importar Corregidos"</strong>.</p>
+                </div>
+
+                <div style="max-height: 450px; overflow-y: auto;" class="terminal-scroll">
+                    <!-- Leyenda de columnas -->
+                    <div style="display:grid; grid-template-columns: 60px 1fr 1fr 1fr 90px 1fr 160px; gap:6px; padding: 4px 12px; margin-bottom:4px;">
+                        <div style="font-size:10px;color:#475569;font-weight:700;font-family:'Inter',sans-serif;text-transform:uppercase;">Fila</div>
+                        <div style="font-size:10px;color:#475569;font-weight:700;font-family:'Inter',sans-serif;text-transform:uppercase;">Vehículo</div>
+                        <div style="font-size:10px;color:#475569;font-weight:700;font-family:'Inter',sans-serif;text-transform:uppercase;">Empleado</div>
+                        <div style="font-size:10px;color:#475569;font-weight:700;font-family:'Inter',sans-serif;text-transform:uppercase;">Ruta</div>
+                        <div style="font-size:10px;color:#475569;font-weight:700;font-family:'Inter',sans-serif;text-transform:uppercase;">Peso (t)</div>
+                        <div style="font-size:10px;color:#475569;font-weight:700;font-family:'Inter',sans-serif;text-transform:uppercase;">Material</div>
+                        <div style="font-size:10px;color:#475569;font-weight:700;font-family:'Inter',sans-serif;text-transform:uppercase;">Fecha</div>
+                    </div>
+                    <table style="width:100%;border-collapse:collapse;" id="correctionTable">
                         <tbody id="correctionTableBody" class="font-mono text-[12px] text-white">
                             <!-- Dynamic failed rows will be appended here -->
                         </tbody>
@@ -685,7 +688,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="px-4 py-2 border border-white/10 text-slate-300 font-cyber-title font-bold text-[11px] rounded" data-bs-dismiss="modal">Descartar</button>
-                <button type="button" class="px-6 py-2 bg-[#39ff14] text-slate-950 font-cyber-title font-bold text-[11px] rounded" id="btnSubmitCorrected" onclick="submitCorrectedRows()">Importar Corregidos</button>
+                <button type="button" class="px-6 py-2 bg-[#0a5da7] text-white font-cyber-title font-bold text-[11px] rounded" id="btnSubmitCorrected" onclick="submitCorrectedRows()">Importar Corregidos</button>
             </div>
         </div>
     </div>

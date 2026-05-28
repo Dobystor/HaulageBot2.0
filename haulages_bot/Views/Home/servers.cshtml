@@ -5,7 +5,7 @@
 
 <style>
     .font-cyber-title {
-        font-family: 'Orbitron', sans-serif;
+        font-family: 'Inter', sans-serif;
     }
     .cyber-input {
         background: rgba(0, 0, 0, 0.5) !important;
@@ -16,8 +16,8 @@
         transition: all 0.3s ease;
     }
     .cyber-input:focus {
-        border-color: #00f0ff !important;
-        box-shadow: 0 0 8px rgba(0, 240, 255, 0.3) !important;
+        border-color: var(--accent) !important;
+        box-shadow: 0 0 0 2px var(--accent-dim) !important;
         outline: none !important;
     }
 </style>
@@ -25,12 +25,12 @@
 <div class="container-fluid py-4">
     <div class="flex justify-between items-center mb-8">
         <div>
-            <h2 class="font-cyber-title text-2xl font-bold tracking-tight text-[#00f0ff]" style="text-shadow: 0 0 5px rgba(0, 240, 255, 0.3);">
-                <span class="material-symbols-outlined text-[#00f0ff] mr-2 text-3xl">dns</span> GESTIÓN DE SERVIDORES
+            <h2 class="font-cyber-title text-2xl font-bold tracking-tight text-white">
+                <span class="material-symbols-outlined text-[#36b0c9] mr-2 text-3xl">dns</span> GESTIÓN DE SERVIDORES
             </h2>
             <p class="text-slate-300 text-sm mt-1 font-medium">Agrega, edita y configura los servidores de SmartFlow vinculados a este bot.</p>
         </div>
-        <button class="px-6 py-2.5 bg-[#00f0ff] text-slate-950 font-cyber-title text-[11px] font-bold rounded-md cyber-glow-primary hover:scale-[0.98] transition-transform" onclick="openServerModal()">
+        <button class="px-6 py-2.5 bg-[#0a5da7] text-white font-cyber-title text-[11px] font-bold rounded-md hover:scale-[0.98] transition-transform" onclick="openServerModal()">
             <span class="material-symbols-outlined mr-1">add</span> NUEVO SERVIDOR
         </button>
     </div>
@@ -48,7 +48,7 @@
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title font-cyber-title font-bold text-[#00f0ff]" id="serverModalLabel"><span class="material-symbols-outlined mr-1">settings</span> Configurar Servidor</h5>
+                <h5 class="modal-title font-cyber-title font-bold text-[#36b0c9]" id="serverModalLabel"><span class="material-symbols-outlined mr-1">settings</span> Configurar Servidor</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body space-y-4">
@@ -92,14 +92,14 @@
                     <div id="modalConnectionError" class="text-red-500 font-bold text-xs mt-2 d-none"></div>
 
                     <div class="flex items-center gap-2 mt-4">
-                        <input type="checkbox" class="rounded border-white/20 text-[#00f0ff] bg-black/50 focus:ring-0 cursor-pointer" id="serverIsActive" checked>
+                        <input type="checkbox" class="rounded border-white/20 text-[#0a5da7] bg-black/50 focus:ring-0 cursor-pointer" id="serverIsActive" checked>
                         <label class="text-[12px] text-white font-medium cursor-pointer" for="serverIsActive">Servidor Activo</label>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="px-4 py-2 border border-white/10 text-slate-300 font-cyber-title font-bold text-[11px] rounded" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="px-6 py-2 bg-[#39ff14] text-slate-950 font-cyber-title font-bold text-[11px] rounded" id="btnSaveServer" onclick="saveServer()">Guardar Cambios</button>
+                <button type="button" class="px-6 py-2 bg-[#0a5da7] text-white font-cyber-title font-bold text-[11px] rounded" id="btnSaveServer" onclick="saveServer()">Guardar Cambios</button>
             </div>
         </div>
     </div>
@@ -136,13 +136,13 @@
                 data.forEach(function(server) {
                     const isWorking = (server.id == activeId);
                     const workingBadge = isWorking ? 
-                        `<span class="px-2.5 py-0.5 bg-[#00f0ff]/15 text-[#00f0ff] border border-[#00f0ff]/30 font-bold rounded text-[10px] tracking-wider font-cyber-title uppercase">SELECCIONADO</span>` : '';
+                        `<span class="px-2.5 py-0.5 bg-[#36b0c9]/15 text-[#36b0c9] border border-[#36b0c9]/30 font-bold rounded text-[10px] tracking-wider font-cyber-title uppercase">SELECCIONADO</span>` : '';
                     
-                    const statusClass = server.isActive ? 'bg-[#39ff14] shadow-[0_0_8px_#39ff14]' : 'bg-slate-500';
+                    const statusClass = server.isActive ? 'bg-[#22c55e]' : 'bg-slate-500';
                     const statusText = server.isActive ? 'Activo' : 'Inactivo';
 
                     const card = `
-                        <div class="cyber-card rounded-lg p-6 flex flex-col justify-between ${isWorking ? 'border-[#00f0ff]/50 shadow-[0_0_15px_rgba(0,240,255,0.05)]' : ''}">
+                        <div class="cyber-card rounded-lg p-6 flex flex-col justify-between ${isWorking ? 'border-[#0a5da7] bg-[#002b49]' : 'border-white/5 bg-[#002237]'}" style="border-width: 1px;">
                             <div>
                                 <div class="flex items-center justify-between mb-4">
                                     <div class="flex items-center gap-2">
@@ -166,7 +166,7 @@
                                         <span class="material-symbols-outlined text-[16px]">delete</span>
                                     </button>
                                 </div>
-                                <button class="w-full py-2.5 ${isWorking ? 'bg-[#00f0ff]/10 text-[#00f0ff]/70 border border-[#00f0ff]/20 cursor-default' : 'bg-[#00f0ff] text-slate-950 hover:scale-[0.98] transition-transform font-bold'} text-[11px] font-cyber-title font-bold uppercase flex items-center justify-center gap-2 rounded-md" ${isWorking ? 'disabled' : `onclick="selectServer(${server.id}, '${server.name}')"`}>
+                                <button class="w-full py-2.5 ${isWorking ? 'bg-[#0a5da7]/10 text-[#0a5da7]/70 border border-[#0a5da7]/20 cursor-default' : 'bg-[#0a5da7] text-white hover:scale-[0.98] transition-transform font-bold'} text-[11px] font-cyber-title font-bold uppercase flex items-center justify-center gap-2 rounded-md" ${isWorking ? 'disabled' : `onclick="selectServer(${server.id}, '${server.name}')"`}>
                                     <span class="material-symbols-outlined text-[16px]">${isWorking ? 'check_circle' : 'import_contacts'}</span>
                                     ${isWorking ? 'TRABAJANDO AQUÍ' : 'TRABAJAR EN ESTE SERVIDOR'}
                                 </button>

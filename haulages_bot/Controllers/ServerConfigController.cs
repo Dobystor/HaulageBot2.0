@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net.Security;
+using Microsoft.Extensions.Configuration;
 
 namespace haulages_bot.Controllers
 {
@@ -18,10 +19,12 @@ namespace haulages_bot.Controllers
     public class ServerConfigController : ControllerBase
     {
         private readonly dbboot _dbContext;
+        private readonly IConfiguration _configuration;
 
-        public ServerConfigController(dbboot dbContext)
+        public ServerConfigController(dbboot dbContext, IConfiguration configuration)
         {
             _dbContext = dbContext;
+            _configuration = configuration;
         }
 
         [HttpGet]
@@ -29,6 +32,39 @@ namespace haulages_bot.Controllers
         {
             var servers = await _dbContext.ServerConfigs.ToListAsync();
             return Ok(servers);
+        }
+
+        // Devuelve el offset de zona horaria efectivo para un servidor dado.
+        // Si el servidor tiene configurado un offset propio, se usa ese; si no, el global de appsettings.
+        [HttpGet("timezone")]
+        public async Task<IActionResult> GetTimezone([FromQuery] int? serverId)
+        {
+            int globalOffset = _configuration.GetValue<int>("TimezoneOffsetHours", 0);
+            
+            if (serverId.HasValue)
+            {
+                var server = await _dbContext.ServerConfigs.FindAsync(serverId.Value);
+                if (server != null && server.TimezoneOffsetHours.HasValue)
+                {
+                    return Ok(new { offsetHours = server.TimezoneOffsetHours.Value, source = "server" });
+                }
+            }
+            
+            return Ok(new { offsetHours = globalOffset, source = "global" });
+        }
+
+        // Actualiza el offset de zona horaria de un servidor específico.
+        [HttpPut("{id}/timezone")]
+        public async Task<IActionResult> UpdateTimezone(int id, [FromBody] TimezoneUpdateDto dto)
+        {
+            var server = await _dbContext.ServerConfigs.FindAsync(id);
+            if (server == null) return NotFound();
+
+            server.TimezoneOffsetHours = dto.OffsetHours; // null = usar global
+            await _dbContext.SaveChangesAsync();
+            
+            int effectiveOffset = dto.OffsetHours ?? _configuration.GetValue<int>("TimezoneOffsetHours", 0);
+            return Ok(new { offsetHours = effectiveOffset });
         }
 
         [HttpPost]
@@ -184,5 +220,11 @@ namespace haulages_bot.Controllers
             [JsonProperty("expires_in")]
             public int ExpiresIn { get; set; }
         }
+    }
+
+    public class TimezoneUpdateDto
+    {
+        // null = usar el valor global de appsettings.json
+        public int? OffsetHours { get; set; }
     }
 }

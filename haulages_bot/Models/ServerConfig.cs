@@ -28,5 +28,10 @@ namespace haulages_bot.Models
         public DateTime? TokenExpiry { get; set; }
         public bool IsBotRunning { get; set; } = false;
         public bool IsSyncEnabledLocal { get; set; } = false;
+
+        // Ajuste de zona horaria en horas. null = usar el valor global de appsettings.json ("TimezoneOffsetHours").
+        // Ejemplo: -6 para UTC-6 (México CST). 0 = sin ajuste.
+        public int? TimezoneOffsetHours { get; set; }
     }
 }
+

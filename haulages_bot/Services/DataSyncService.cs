@@ -101,15 +101,23 @@ public class DataSyncService : IHostedService, IDisposable
             var workShifts = await GetDataFromApi<List<Shift>>(workShiftsUrl, token);
             await SyncEntity(dbContext, workShifts, server.Id, w => w.WorkShiftId, w => w);
 
-            // Sincronizar Route
-            var haulagePathsUrl = $"{host}/service/haulages/api/v2/haulagepaths/all";
-            var haulagePaths = await GetDataFromApi<List<haulages_bot.Models.Route>>(haulagePathsUrl, token);
-            await SyncEntity(dbContext, haulagePaths, server.Id, r => r.haulagePathId, r => r);
-
             // Sincronizar Material
             var materialTypesUrl = $"{host}/service/haulages/api/v2/materialtypes/all";
             var materialTypes = await GetDataFromApi<List<Material>>(materialTypesUrl, token);
             await SyncEntity(dbContext, materialTypes, server.Id, m => m.materialTypeId, m => m);
+
+            // Sincronizar Route
+            var haulagePathsUrl = $"{host}/service/haulages/api/v2/haulagepaths/all";
+            var haulagePaths = await GetDataFromApi<List<haulages_bot.Models.Route>>(haulagePathsUrl, token);
+            var materialDict = materialTypes?.ToDictionary(m => m.materialTypeId, m => m.name) ?? new Dictionary<int, string>();
+            foreach (var route in haulagePaths)
+            {
+                if (route.materialTypeId.HasValue && materialDict.TryGetValue(route.materialTypeId.Value, out var matName))
+                {
+                    route.materialType = matName;
+                }
+            }
+            await SyncEntity(dbContext, haulagePaths, server.Id, r => r.haulagePathId, r => r);
 
             // Sincronizar Employees
             await SyncEmployees(dbContext, server, token);
@@ -156,11 +164,116 @@ public class DataSyncService : IHostedService, IDisposable
             tableName = TableNameExceptions[tableName];
         }
 
+        bool isSqlServer = dbContext.Database.IsSqlServer();
+        if (!isSqlServer)
+        {
+            await dbContext.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = OFF;");
+        }
+
         using (var transaction = await dbContext.Database.BeginTransactionAsync())
         {
             try
             {
-                bool isSqlServer = dbContext.Database.IsSqlServer();
+                var incomingIds = entities.Select(getId).ToList();
+
+                // Limpieza de entidades obsoletas antes de guardar las nuevas
+                if (typeof(T) == typeof(haulages_bot.Models.Route))
+                {
+                    var haulagesToNullify = await dbContext.Haulages
+                        .Where(h => h.ServerConfigId == serverId && h.PathId != null && !incomingIds.Contains(h.PathId.Value))
+                        .ToListAsync();
+                    foreach (var h in haulagesToNullify)
+                    {
+                        h.PathId = null;
+                    }
+                    if (haulagesToNullify.Any())
+                    {
+                        await dbContext.SaveChangesAsync();
+                    }
+
+                    var routesToDelete = await dbContext.Routes
+                        .Where(r => r.ServerConfigId == serverId && !incomingIds.Contains(r.haulagePathId))
+                        .ToListAsync();
+                    if (routesToDelete.Any())
+                    {
+                        dbContext.Routes.RemoveRange(routesToDelete);
+                        await dbContext.SaveChangesAsync();
+                    }
+
+                    var config = await dbContext.DataConfigurationLocal.FirstOrDefaultAsync(c => c.ServerConfigId == serverId);
+                    if (config != null && !string.IsNullOrEmpty(config.SelectedRoutes))
+                    {
+                        try
+                        {
+                            var selectedRoutesList = JsonConvert.DeserializeObject<List<int>>(config.SelectedRoutes) ?? new List<int>();
+                            var updatedList = selectedRoutesList.Where(id => incomingIds.Contains(id)).ToList();
+                            config.SelectedRoutes = JsonConvert.SerializeObject(updatedList);
+                            await dbContext.SaveChangesAsync();
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning($"No se pudo limpiar la configuración de rutas seleccionadas para el servidor {serverId}: {ex.Message}");
+                        }
+                    }
+                }
+                else if (typeof(T) == typeof(Material))
+                {
+                    var haulagesToNullify = await dbContext.Haulages
+                        .Where(h => h.ServerConfigId == serverId && h.materialTypeId != null && !incomingIds.Contains(h.materialTypeId.Value))
+                        .ToListAsync();
+                    foreach (var h in haulagesToNullify)
+                    {
+                        h.materialTypeId = null;
+                    }
+                    if (haulagesToNullify.Any())
+                    {
+                        await dbContext.SaveChangesAsync();
+                    }
+
+                    var materialsToDelete = await dbContext.Materials
+                        .Where(m => m.ServerConfigId == serverId && !incomingIds.Contains(m.materialTypeId))
+                        .ToListAsync();
+                    if (materialsToDelete.Any())
+                    {
+                        dbContext.Materials.RemoveRange(materialsToDelete);
+                        await dbContext.SaveChangesAsync();
+                    }
+                }
+                else if (typeof(T) == typeof(Company))
+                {
+                    var companiesToDelete = await dbContext.Companies
+                        .Where(c => c.ServerConfigId == serverId && !incomingIds.Contains(c.CompanyId))
+                        .ToListAsync();
+                    if (companiesToDelete.Any())
+                    {
+                        dbContext.Companies.RemoveRange(companiesToDelete);
+                        await dbContext.SaveChangesAsync();
+                    }
+                }
+                else if (typeof(T) == typeof(Shift))
+                {
+                    var haulagesToNullify = await dbContext.Haulages
+                        .Where(h => h.ServerConfigId == serverId && h.ShiftId != null && !incomingIds.Contains(h.ShiftId.Value))
+                        .ToListAsync();
+                    foreach (var h in haulagesToNullify)
+                    {
+                        h.ShiftId = null;
+                    }
+                    if (haulagesToNullify.Any())
+                    {
+                        await dbContext.SaveChangesAsync();
+                    }
+
+                    var shiftsToDelete = await dbContext.Shifts
+                        .Where(s => s.ServerConfigId == serverId && !incomingIds.Contains(s.WorkShiftId))
+                        .ToListAsync();
+                    if (shiftsToDelete.Any())
+                    {
+                        dbContext.Shifts.RemoveRange(shiftsToDelete);
+                        await dbContext.SaveChangesAsync();
+                    }
+                }
+
                 if (isSqlServer)
                 {
                     await dbContext.Database.ExecuteSqlRawAsync($"SET IDENTITY_INSERT {tableName} ON;");
@@ -203,6 +316,13 @@ public class DataSyncService : IHostedService, IDisposable
                 _logger.LogError($"Error al sincronizar la entidad {typeof(T).Name}: {ex.Message}");
                 await transaction.RollbackAsync();
                 throw;
+            }
+            finally
+            {
+                if (!isSqlServer)
+                {
+                    await dbContext.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = ON;");
+                }
             }
         }
     }

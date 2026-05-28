@@ -25,16 +25,26 @@ namespace haulages_bot.Controllers
         {
             try
             {
+                var materials = await _context.Materials
+                    .Where(m => m.ServerConfigId == serverId)
+                    .ToDictionaryAsync(m => m.materialTypeId, m => m.name);
+
                 var routes = await _context.Routes
                     .Where(r => r.ServerConfigId == serverId)
-                    .Select(r => new
-                    {
-                        r.haulagePathId,
-                        r.description,
-                        r.selectedMaterialType
-                    }).ToListAsync();
+                    .ToListAsync();
 
-                return Ok(routes);
+                var routesWithMaterial = routes.Select(r => new
+                {
+                    r.haulagePathId,
+                    r.description,
+                    r.selectedMaterialType,
+                    r.isExtraction,
+                    r.materialTypeId,
+                    materialType = r.materialType ?? 
+                        (r.materialTypeId.HasValue && materials.TryGetValue(r.materialTypeId.Value, out var name) ? name : null)
+                }).ToList();
+
+                return Ok(routesWithMaterial);
             }
             catch (Exception ex)
             {

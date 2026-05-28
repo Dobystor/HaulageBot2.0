@@ -28,7 +28,7 @@ namespace haulages_bot.Controllers
         private readonly TokenService _tokenService;
         private readonly HttpClient _httpClient;
         private readonly IHubContext<NotificationHub> _notificationHubContext;
-        private readonly IServiceProvider _serviceProvider;
+        private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly LogHistoryService _logHistoryService;
 
         public DataSyncController(
@@ -39,7 +39,7 @@ namespace haulages_bot.Controllers
             TokenService tokenService,
             IHttpClientFactory httpClientFactory,
             IHubContext<NotificationHub> notificationHubContext,
-            IServiceProvider serviceProvider,
+            IServiceScopeFactory serviceScopeFactory,
             LogHistoryService logHistoryService)
         {
             _dataSyncManualService = dataSyncManualService;
@@ -49,7 +49,7 @@ namespace haulages_bot.Controllers
             _tokenService = tokenService;
             _httpClient = httpClientFactory.CreateClient();
             _notificationHubContext = notificationHubContext;
-            _serviceProvider = serviceProvider;
+            _serviceScopeFactory = serviceScopeFactory;
             _logHistoryService = logHistoryService;
         }
 
@@ -189,9 +189,25 @@ namespace haulages_bot.Controllers
             var token = await _tokenService.GetTokenAsync(request.ServerId);
             if (string.IsNullOrEmpty(token)) return Unauthorized("No se pudo obtener el token de autorización.");
 
-            // Conseguir un material del catálogo para este servidor
-            var material = await _dbContext.Materials.FirstOrDefaultAsync(m => m.ServerConfigId == request.ServerId);
-            int materialId = material?.materialTypeId ?? 1;
+            // Pre-cargar rutas y materiales para resolver materialTypeId de forma dinámica y eficiente en memoria
+            var routes = await _dbContext.Routes
+                .Where(r => r.ServerConfigId == request.ServerId && selectedRoutes.Contains(r.haulagePathId))
+                .ToDictionaryAsync(r => r.haulagePathId, r => r);
+            if (!routes.Any()) return BadRequest("No se encontraron las rutas activas seleccionadas en la base de datos.");
+
+            var materials = await _dbContext.Materials
+                .Where(m => m.ServerConfigId == request.ServerId)
+                .ToListAsync();
+
+            var mineralMat = materials.FirstOrDefault(m =>
+                m.name.ToUpperInvariant().Contains("MINERAL"));
+            var desmonteMat = materials.FirstOrDefault(m =>
+                m.name.ToUpperInvariant().Contains("DESMONTE") ||
+                m.name.ToUpperInvariant().Contains("ESTERIL") ||
+                m.name.ToUpperInvariant().Contains("ESTÉRIL"));
+
+            int mineralId = mineralMat?.materialTypeId ?? (materials.Any() ? materials.First().materialTypeId : 1);
+            int desmonteId = desmonteMat?.materialTypeId ?? mineralId;
 
             // Pre-calcular la lista de acarreos (pesos y vehículos) para no hacerlo en el thread asíncrono
             var vehicles = await _dbContext.Vehicles
@@ -248,12 +264,12 @@ namespace haulages_bot.Controllers
                 int failed = 0;
                 try
                 {
-                    using (var scope = _serviceProvider.CreateScope())
+                    using (var scope = _serviceScopeFactory.CreateScope())
                     {
                         var db = scope.ServiceProvider.GetRequiredService<dbboot>();
+                        var tokenService = scope.ServiceProvider.GetRequiredService<TokenService>();
                         var httpClientFactory = scope.ServiceProvider.GetRequiredService<IHttpClientFactory>();
                         var client = httpClientFactory.CreateClient();
-                        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
                         var host = server.ApiUrl.StartsWith("http") ? server.ApiUrl : $"https://{server.ApiUrl}";
                         var apiEndpoint = $"{host}/service/haulages/api/v2/manualhaulages/manual/add";
 
@@ -261,12 +277,41 @@ namespace haulages_bot.Controllers
                         {
                             try
                             {
+                                // Obtener token actual (si ha expirado se refresca automáticamente)
+                                var currentToken = await tokenService.GetTokenAsync(request.ServerId);
+                                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", currentToken);
+
                                 int routeId = selectedRoutes[random.Next(selectedRoutes.Count)];
                                 int employeeId = selectedEmployees[random.Next(selectedEmployees.Count)];
                                 var item = weightsAndVehicles[i];
                                 int vehicleId = item.Vehicle.VehicleId;
                                 decimal weight = item.Weight;
                                 DateTime dateOfCarry = dates[i];
+
+                                // Resolver materialTypeId en base al tipo de material de la ruta seleccionada
+                                int resolvedMaterialTypeId = mineralId;
+                                if (routes.TryGetValue(routeId, out var routeDetail))
+                                {
+                                    int specificEsterilId = desmonteId;
+                                    if (routeDetail.materialTypeId.HasValue && routeDetail.materialTypeId.Value != 0 && routeDetail.materialTypeId.Value != mineralId)
+                                    {
+                                        specificEsterilId = routeDetail.materialTypeId.Value;
+                                    }
+
+                                    switch (routeDetail.selectedMaterialType)
+                                    {
+                                        case 1:
+                                            resolvedMaterialTypeId = specificEsterilId;
+                                            break;
+                                        case 2:
+                                            resolvedMaterialTypeId = random.Next(2) == 0 ? mineralId : specificEsterilId;
+                                            break;
+                                        case 0:
+                                        default:
+                                            resolvedMaterialTypeId = mineralId;
+                                            break;
+                                    }
+                                }
 
                                 var acarreo = new
                                 {
@@ -276,7 +321,7 @@ namespace haulages_bot.Controllers
                                     Weight = weight,
                                     Date = dateOfCarry,
                                     Comments = "Importación Masiva Rango Fechas",
-                                    materialTypeId = materialId
+                                    materialTypeId = resolvedMaterialTypeId
                                 };
 
                                 var jsonContent = JsonConvert.SerializeObject(acarreo);
@@ -295,7 +340,7 @@ namespace haulages_bot.Controllers
                                         PathId = routeId,
                                         Weight = weight,
                                         Comments = "Importación Masiva Rango Fechas",
-                                        materialTypeId = materialId,
+                                        materialTypeId = resolvedMaterialTypeId,
                                         ServerConfigId = request.ServerId,
                                         Dateofcarries = dateOfCarry.ToString("yyyy-MM-dd HH:mm:ss")
                                     });
@@ -304,6 +349,8 @@ namespace haulages_bot.Controllers
                                 else
                                 {
                                     failed++;
+                                    var errorResponse = await response.Content.ReadAsStringAsync();
+                                    Console.WriteLine($"Error al registrar acarreo masivo {i}: Código {response.StatusCode} - {errorResponse}");
                                 }
                             }
                             catch (Exception ex)

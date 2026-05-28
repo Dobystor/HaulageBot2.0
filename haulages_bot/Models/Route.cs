@@ -26,6 +26,12 @@ namespace haulages_bot.Models
         // Tipo de material de la ruta: 1=Mineral, 2=Estéril/Desmonte, 3=Ambos
         public int selectedMaterialType { get; set; }
 
+        // Identificador del tipo de material asociado en la API
+        public int? materialTypeId { get; set; }
+
+        // Nombre del tipo de material asociado en la API
+        public string? materialType { get; set; }
+
         // Identificador del punto de carga asociado con la ruta
         public int loadPointId { get; set; }
 

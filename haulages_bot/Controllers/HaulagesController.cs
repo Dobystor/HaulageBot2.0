@@ -21,7 +21,7 @@ namespace haulages_bot.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetHaulages([FromQuery] int serverId)
+        public async Task<IActionResult> GetHaulages([FromQuery] int serverId, [FromQuery] int limit = 100)
         {
             var query = from h in _context.Haulages.Where(h => h.ServerConfigId == serverId)
                         join v in _context.Vehicles.Where(v => v.ServerConfigId == serverId) on h.VehicleId equals v.VehicleId into vg
@@ -48,7 +48,8 @@ namespace haulages_bot.Controllers
                             MaterialName = m != null ? m.name : h.MaterialType ?? ""
                         };
 
-            var list = await query.Take(100).ToListAsync();
+            if (limit <= 0) limit = 100;
+            var list = await query.Take(limit).ToListAsync();
             return Ok(list);
         }
 

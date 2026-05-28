@@ -1,6 +1,7 @@
 $(document).ready(function () {
     let activeServerId = null;
     let serverList = [];
+    let haulageLimit = 100;
     
     // Configuración inicial de UI
     const addServerModal = new bootstrap.Modal(document.getElementById('addServerModal'));
@@ -589,23 +590,35 @@ $(document).ready(function () {
 
     // Cargar Historial de Acarreos en la tabla HTML
     function loadHaulageHistory(serverId) {
-        $.getJSON(`/api/Haulages?serverId=${serverId}`, function (data) {
+        $.getJSON(`/api/Haulages?serverId=${serverId}&limit=${haulageLimit}`, function (data) {
             const tbody = $('#latestHaulagesTableBody');
             tbody.empty();
             if (data.length === 0) {
-                tbody.append('<tr><td colspan="7" class="px-6 py-8 text-center text-on-surface-variant/50">Sin registros de acarreos locales para este servidor.</td></tr>');
+                tbody.append('<tr><td colspan="8" class="px-6 py-8 text-center text-slate-500 font-sans">Sin registros de acarreos locales para este servidor.</td></tr>');
                 return;
             }
             data.forEach(item => {
+                // Generar badge o color premium según material
+                let materialBadge = '';
+                const matName = (item.materialName || '').toUpperCase();
+                if (matName.includes('MINERAL')) {
+                    materialBadge = `<span class="px-2 py-0.5 text-[10px] font-bold rounded bg-[#f59e0b]/10 text-[#f59e0b] border border-[#f59e0b]/20 uppercase">${item.materialName}</span>`;
+                } else if (matName !== '') {
+                    materialBadge = `<span class="px-2 py-0.5 text-[10px] font-bold rounded bg-[#ef4444]/10 text-[#ef4444] border border-[#ef4444]/20 uppercase">${item.materialName}</span>`;
+                } else {
+                    materialBadge = `<span class="text-slate-500">-</span>`;
+                }
+
                 const tr = `
-                    <tr class="hover:bg-primary-container/5 transition-colors group">
+                    <tr class="hover:bg-white/5 transition-colors group">
                         <td class="px-6 py-4 font-data-mono text-[13px] text-white">${item.haulageId}</td>
-                        <td class="px-6 py-4 font-data-mono text-[13px] text-on-surface-variant">${item.vehicleEconomicNumber || item.vehicleId}</td>
-                        <td class="px-6 py-4 font-data-mono text-[13px] text-on-surface-variant">${item.employeeFullName || item.employeeId}</td>
-                        <td class="px-6 py-4 font-data-mono text-[13px] text-on-surface-variant">${item.routeDescription || item.pathId}</td>
-                        <td class="px-6 py-4 font-data-mono text-[13px] text-tertiary-fixed-dim font-bold">${item.weight.toFixed(2)}</td>
-                        <td class="px-6 py-4 font-data-mono text-[13px] text-on-surface-variant">${item.dateofcarries}</td>
-                        <td class="px-6 py-4 text-[12px] text-on-surface-variant">${item.comments || ''}</td>
+                        <td class="px-6 py-4 font-data-mono text-[13px] text-slate-300">${item.vehicleEconomicNumber || item.vehicleId}</td>
+                        <td class="px-6 py-4 font-data-mono text-[13px] text-slate-300">${item.employeeFullName || item.employeeId}</td>
+                        <td class="px-6 py-4 font-data-mono text-[13px] text-slate-300">${item.routeDescription || item.pathId}</td>
+                        <td class="px-6 py-4 font-data-mono text-[13px]">${materialBadge}</td>
+                        <td class="px-6 py-4 font-data-mono text-[13px] text-[#39ff14] font-bold">${item.weight.toFixed(2)}</td>
+                        <td class="px-6 py-4 font-data-mono text-[13px] text-slate-400">${item.dateofcarries}</td>
+                        <td class="px-6 py-4 text-[12px] text-slate-400">${item.comments || ''}</td>
                     </tr>
                 `;
                 tbody.append(tr);
@@ -859,6 +872,25 @@ $(document).ready(function () {
         $('#loading-screen').removeClass('d-none');
     }
 
+    // Manejar selector de límite de acarreos
+    $('#haulageLimitSelector button').click(function () {
+        const selectedLimit = parseInt($(this).attr('data-limit'));
+        if (selectedLimit && selectedLimit !== haulageLimit) {
+            haulageLimit = selectedLimit;
+            
+            // Actualizar estilo visual de los botones
+            $('#haulageLimitSelector button').removeClass('text-[#39ff14] bg-[#39ff14]/10 border border-[#39ff14]/20')
+                                             .addClass('text-slate-400');
+            $(this).removeClass('text-slate-400')
+                   .addClass('text-[#39ff14] bg-[#39ff14]/10 border border-[#39ff14]/20');
+            
+            // Recargar datos
+            if (activeServerId) {
+                loadHaulageHistory(activeServerId);
+            }
+        }
+    });
+
     function hideLoadingScreen() {
         $('#loading-screen').addClass('d-none');
     }
@@ -872,7 +904,7 @@ window.openAddServerModal = function() {
     addServerModal.show();
 };
 
-// Función global para seleccionar/deseleccionar todos los elementos de un catálogo
+// Función global para seleccionar/deseleccionar todos los elementos de un catálogo (solo visibles/filtrados)
 window.toggleSelectAll = function(listId, checkBool) {
-    $(`#${listId} input[type="checkbox"]`).prop('checked', checkBool).trigger('change');
+    $(`#${listId} .checkbox-item:visible input[type="checkbox"]`).prop('checked', checkBool).trigger('change');
 };

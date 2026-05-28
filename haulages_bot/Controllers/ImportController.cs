@@ -172,11 +172,44 @@ namespace haulages_bot.Controllers
                                 r.description.ToLower() == routeDescription.ToLower());
                             if (route == null) throw new Exception($"Ruta '{routeDescription}' no encontrada.");
 
-                            // 4. Resolver material por nombre
-                            var material = await _dbContext.Materials.FirstOrDefaultAsync(m => 
-                                m.ServerConfigId == serverId && 
-                                m.name.ToLower() == materialName.ToLower());
-                            if (material == null) throw new Exception($"Material '{materialName}' no encontrado.");
+                            // 4. Resolver material por nombre (u obtenerlo automáticamente si está vacío en Excel)
+                            int resolvedMaterialTypeId;
+                            if (string.IsNullOrEmpty(materialName))
+                            {
+                                var materials = await _dbContext.Materials.Where(m => m.ServerConfigId == serverId).ToListAsync();
+                                var mineralMat = materials.FirstOrDefault(m => m.name.ToUpperInvariant().Contains("MINERAL"));
+                                var desmonteMat = materials.FirstOrDefault(m => m.name.ToUpperInvariant().Contains("DESMONTE") || m.name.ToUpperInvariant().Contains("ESTERIL") || m.name.ToUpperInvariant().Contains("ESTÉRIL"));
+                                int mineralId = mineralMat?.materialTypeId ?? (materials.Any() ? materials.First().materialTypeId : 1);
+                                int desmonteId = desmonteMat?.materialTypeId ?? mineralId;
+
+                                int specificEsterilId = desmonteId;
+                                if (route.materialTypeId.HasValue && route.materialTypeId.Value != 0 && route.materialTypeId.Value != mineralId)
+                                {
+                                    specificEsterilId = route.materialTypeId.Value;
+                                }
+
+                                switch (route.selectedMaterialType)
+                                {
+                                    case 1:
+                                        resolvedMaterialTypeId = specificEsterilId;
+                                        break;
+                                    case 2:
+                                        resolvedMaterialTypeId = new Random().Next(2) == 0 ? mineralId : specificEsterilId;
+                                        break;
+                                    case 0:
+                                    default:
+                                        resolvedMaterialTypeId = mineralId;
+                                        break;
+                                }
+                            }
+                            else
+                            {
+                                var material = await _dbContext.Materials.FirstOrDefaultAsync(m => 
+                                    m.ServerConfigId == serverId && 
+                                    m.name.ToLower() == materialName.ToLower());
+                                if (material == null) throw new Exception($"Material '{materialName}' no encontrado.");
+                                resolvedMaterialTypeId = material.materialTypeId;
+                            }
 
                             var acarreo = new
                             {
@@ -186,7 +219,7 @@ namespace haulages_bot.Controllers
                                 Weight = weight,
                                 Date = dateOfCarries,
                                 Comments = "Importado desde Excel",
-                                materialTypeId = material.materialTypeId
+                                materialTypeId = resolvedMaterialTypeId
                             };
 
                             var jsonContent = JsonConvert.SerializeObject(acarreo);
@@ -206,7 +239,7 @@ namespace haulages_bot.Controllers
                                     PathId = route.haulagePathId,
                                     Weight = weight,
                                     Comments = "Importado desde Excel",
-                                    materialTypeId = material.materialTypeId,
+                                    materialTypeId = resolvedMaterialTypeId,
                                     ServerConfigId = serverId,
                                     Dateofcarries = dateOfCarries.ToString("yyyy-MM-dd HH:mm:ss")
                                 });
@@ -307,10 +340,44 @@ namespace haulages_bot.Controllers
                         r.description.ToLower() == row.RouteDescription.Trim().ToLower());
                     if (route == null) throw new Exception($"Ruta '{row.RouteDescription}' no encontrada.");
 
-                    var material = await _dbContext.Materials.FirstOrDefaultAsync(m => 
-                        m.ServerConfigId == serverId && 
-                        m.name.ToLower() == row.MaterialName.Trim().ToLower());
-                    if (material == null) throw new Exception($"Material '{row.MaterialName}' no encontrado.");
+                    int resolvedMaterialTypeId;
+                    var matNameCell = row.MaterialName?.Trim() ?? "";
+                    if (string.IsNullOrEmpty(matNameCell))
+                    {
+                        var materials = await _dbContext.Materials.Where(m => m.ServerConfigId == serverId).ToListAsync();
+                        var mineralMat = materials.FirstOrDefault(m => m.name.ToUpperInvariant().Contains("MINERAL"));
+                        var desmonteMat = materials.FirstOrDefault(m => m.name.ToUpperInvariant().Contains("DESMONTE") || m.name.ToUpperInvariant().Contains("ESTERIL") || m.name.ToUpperInvariant().Contains("ESTÉRIL"));
+                        int mineralId = mineralMat?.materialTypeId ?? (materials.Any() ? materials.First().materialTypeId : 1);
+                        int desmonteId = desmonteMat?.materialTypeId ?? mineralId;
+
+                        int specificEsterilId = desmonteId;
+                        if (route.materialTypeId.HasValue && route.materialTypeId.Value != 0 && route.materialTypeId.Value != mineralId)
+                        {
+                            specificEsterilId = route.materialTypeId.Value;
+                        }
+
+                        switch (route.selectedMaterialType)
+                        {
+                            case 1:
+                                resolvedMaterialTypeId = specificEsterilId;
+                                break;
+                            case 2:
+                                resolvedMaterialTypeId = new Random().Next(2) == 0 ? mineralId : specificEsterilId;
+                                break;
+                            case 0:
+                            default:
+                                resolvedMaterialTypeId = mineralId;
+                                break;
+                        }
+                    }
+                    else
+                    {
+                        var material = await _dbContext.Materials.FirstOrDefaultAsync(m => 
+                            m.ServerConfigId == serverId && 
+                            m.name.ToLower() == matNameCell.ToLower());
+                        if (material == null) throw new Exception($"Material '{matNameCell}' no encontrado.");
+                        resolvedMaterialTypeId = material.materialTypeId;
+                    }
 
                     DateTime dateOfCarries;
                     if (!DateTime.TryParse(row.DateStr, out dateOfCarries))
@@ -324,7 +391,7 @@ namespace haulages_bot.Controllers
                         Weight = row.Weight,
                         Date = dateOfCarries,
                         Comments = "Importado corregido desde UI",
-                        materialTypeId = material.materialTypeId
+                        materialTypeId = resolvedMaterialTypeId
                     };
 
                     var jsonContent = JsonConvert.SerializeObject(acarreo);
@@ -342,7 +409,7 @@ namespace haulages_bot.Controllers
                             PathId = route.haulagePathId,
                             Weight = row.Weight,
                             Comments = "Importado corregido desde UI",
-                            materialTypeId = material.materialTypeId,
+                            materialTypeId = resolvedMaterialTypeId,
                             ServerConfigId = serverId,
                             Dateofcarries = dateOfCarries.ToString("yyyy-MM-dd HH:mm:ss")
                         });

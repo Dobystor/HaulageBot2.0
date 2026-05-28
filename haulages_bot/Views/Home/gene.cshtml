@@ -16,7 +16,43 @@
     .font-cyber-title {
         font-family: 'Orbitron', sans-serif;
     }
-    
+
+    /* Botones de filtro de material para rutas */
+    .route-mat-btn {
+        color: rgba(150, 170, 200, 0.7);
+        border-color: rgba(150, 170, 200, 0.2);
+        background: rgba(150, 170, 200, 0.05);
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    .route-mat-btn:hover {
+        opacity: 0.85;
+    }
+    .route-mat-btn.active[data-mat="all"] {
+        color: #00f0ff;
+        border-color: rgba(0,240,255,0.5);
+        background: rgba(0,240,255,0.12);
+        box-shadow: 0 0 6px rgba(0,240,255,0.2);
+    }
+    .route-mat-btn.active[data-mat="1"] {
+        color: #ffd700;
+        border-color: rgba(255,215,0,0.6);
+        background: rgba(255,215,0,0.15);
+        box-shadow: 0 0 6px rgba(255,215,0,0.2);
+    }
+    .route-mat-btn.active[data-mat="2"] {
+        color: #ff6432;
+        border-color: rgba(255,100,50,0.6);
+        background: rgba(255,100,50,0.15);
+        box-shadow: 0 0 6px rgba(255,100,50,0.2);
+    }
+    .route-mat-btn.active[data-mat="3"] {
+        color: #00c8b4;
+        border-color: rgba(0,200,180,0.6);
+        background: rgba(0,200,180,0.15);
+        box-shadow: 0 0 6px rgba(0,200,180,0.2);
+    }
+
     /* Inputs matching high readability */
     .cyber-input {
         background: rgba(0, 0, 0, 0.5) !important;
@@ -49,23 +85,40 @@
 
     /* Custom premium dark/neon Flatpickr style overrides */
     .flatpickr-calendar {
-        background: #0b111e !important;
-        border: 1px solid rgba(0, 240, 255, 0.25) !important;
-        box-shadow: 0 0 20px rgba(0, 240, 255, 0.2) !important;
-        border-radius: 8px !important;
+        background: rgba(13, 20, 35, 0.95) !important;
+        backdrop-filter: blur(20px) !important;
+        border: 1px solid rgba(0, 240, 255, 0.3) !important;
+        box-shadow: 0 10px 30px rgba(0, 240, 255, 0.15) !important;
+        border-radius: 12px !important;
         font-family: 'Outfit', sans-serif !important;
     }
     .flatpickr-calendar.arrowTop:before {
-        border-bottom-color: rgba(0, 240, 255, 0.25) !important;
+        border-bottom-color: rgba(0, 240, 255, 0.3) !important;
     }
     .flatpickr-calendar.arrowTop:after {
-        border-bottom-color: #0b111e !important;
+        border-bottom-color: rgba(13, 20, 35, 0.95) !important;
     }
     .flatpickr-months {
         background: transparent !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+        padding-bottom: 6px !important;
     }
     .flatpickr-month {
         color: #ffffff !important;
+    }
+    .flatpickr-current-month {
+        font-family: 'Orbitron', sans-serif !important;
+        font-weight: 700 !important;
+        text-transform: uppercase !important;
+        color: #ffffff !important;
+        font-size: 13px !important;
+    }
+    .flatpickr-monthDropdown-months {
+        color: #ffffff !important;
+        background: #0d1423 !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 4px !important;
+        padding: 2px 6px !important;
     }
     .flatpickr-current-month .numInputWrapper span.arrowUp:after {
         border-bottom-color: #ffffff !important;
@@ -74,37 +127,58 @@
         border-top-color: #ffffff !important;
     }
     .flatpickr-weekday {
-        color: rgba(0, 240, 255, 0.7) !important;
-        font-weight: 600 !important;
+        color: #00f0ff !important;
+        font-family: 'Orbitron', sans-serif !important;
+        font-weight: 700 !important;
+        font-size: 10px !important;
+        letter-spacing: 0.5px !important;
     }
     .flatpickr-day {
         color: #e2e8f0 !important;
-        border-radius: 6px !important;
+        font-weight: 500 !important;
+        border-radius: 8px !important;
+        border: 1px solid transparent !important;
         transition: all 0.2s ease !important;
+        margin: 2px !important;
+        height: 35px !important;
+        line-height: 33px !important;
+    }
+    .flatpickr-day.prevMonthDay, .flatpickr-day.nextMonthDay {
+        color: rgba(255, 255, 255, 0.25) !important;
     }
     .flatpickr-day.today {
-        border-color: #bc34fa !important;
-        color: #bc34fa !important;
+        border-color: #ff0055 !important;
+        color: #ff0055 !important;
+        font-weight: bold !important;
+        box-shadow: 0 0 5px rgba(255, 0, 85, 0.3) !important;
+    }
+    .flatpickr-day.today:hover {
+        background: rgba(255, 0, 85, 0.1) !important;
+        color: #ff0055 !important;
     }
     .flatpickr-day:hover, .flatpickr-day.prevMonthDay:hover, .flatpickr-day.nextMonthDay:hover {
         background: rgba(0, 240, 255, 0.1) !important;
         color: #00f0ff !important;
-        border-color: transparent !important;
+        border-color: rgba(0, 240, 255, 0.3) !important;
     }
-    .flatpickr-day.selected, .flatpickr-day.selected:hover {
-        background: #00f0ff !important;
-        color: #0d121f !important;
-        font-weight: bold !important;
-        box-shadow: 0 0 10px rgba(0, 240, 255, 0.4) !important;
-        border-color: #00f0ff !important;
+    .flatpickr-day.selected, .flatpickr-day.selected:hover,
+    .flatpickr-day.startRange, .flatpickr-day.endRange {
+        background: linear-gradient(135deg, #00f0ff 0%, #bc34fa 100%) !important;
+        color: #000000 !important;
+        font-weight: 800 !important;
+        border-color: transparent !important;
+        box-shadow: 0 0 12px rgba(0, 240, 255, 0.5) !important;
     }
     .flatpickr-time {
         border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
-        background: #0b111e !important;
+        background: rgba(13, 20, 35, 0.95) !important;
+        border-radius: 0 0 12px 12px !important;
     }
     .flatpickr-time input {
-        color: #ffffff !important;
+        color: #00f0ff !important;
         font-family: 'JetBrains Mono', monospace !important;
+        font-weight: 700 !important;
+        font-size: 14px !important;
     }
     .flatpickr-time .numInputWrapper span.arrowUp:after {
         border-bottom-color: #ffffff !important;
@@ -115,8 +189,22 @@
     .flatpickr-time input:hover, .flatpickr-time input:focus {
         background: rgba(255, 255, 255, 0.05) !important;
     }
+    .flatpickr-time .flatpickr-time-separator {
+        color: #ffffff !important;
+    }
     .flatpickr-time .flatpickr-am-pm {
         color: #ffffff !important;
+        font-family: 'Orbitron', sans-serif !important;
+        font-weight: 700 !important;
+    }
+
+    /* Adjust checkbox list alignment when text wraps */
+    .checkbox-item {
+        display: flex;
+        align-items: flex-start !important;
+    }
+    .checkbox-item input[type="checkbox"] {
+        margin-top: 3px !important;
     }
 
     /* Server Tabs Styles Overrides for Ultra Premium look */
@@ -207,10 +295,10 @@
     </div>
 
     <!-- Main Dashboard Workspace -->
-    <div id="dashboardWorkspace" class="grid grid-cols-12 gap-gutter d-none">
+    <div id="dashboardWorkspace" class="grid grid-cols-12 gap-6 d-none">
         
         <!-- Left Side: Config & Bulk Forms -->
-        <div class="col-span-12 lg:col-span-8 space-y-gutter">
+        <div class="col-span-12 lg:col-span-8 space-y-6">
             
             <!-- Server Tabs (Dynamic Server Switcher) -->
             <div class="server-tabs-container mb-4" id="serverTabs">
@@ -252,57 +340,71 @@
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-3 gap-6">
-                        <!-- Selection Panels -->
-                        <div class="space-y-3">
-                            <div class="flex justify-between items-end">
-                                <label class="font-cyber-title text-[11px] text-[#00f0ff] font-bold">RUTAS ACTIVAS</label>
-                                <div class="flex gap-2">
-                                    <button type="button" class="text-[9px] text-[#00f0ff] underline font-bold" onclick="toggleSelectAll('routesList', true)">Todos</button>
-                                    <button type="button" class="text-[9px] text-slate-400 underline" onclick="toggleSelectAll('routesList', false)">Ninguno</button>
-                                </div>
+                    <div class="grid grid-cols-3 gap-x-6 gap-y-2">
+                        <!-- Row 1: Headers -->
+                        <div class="flex justify-between items-end">
+                            <label class="font-cyber-title text-[11px] text-[#00f0ff] font-bold">RUTAS ACTIVAS</label>
+                            <div class="flex gap-2">
+                                <button type="button" class="text-[9px] text-[#00f0ff] underline font-bold" onclick="toggleSelectAll('routesList', true)">Todos</button>
+                                <button type="button" class="text-[9px] text-slate-400 underline" onclick="toggleSelectAll('routesList', false)">Ninguno</button>
                             </div>
+                        </div>
+                        <div class="flex justify-between items-end">
+                            <label class="font-cyber-title text-[11px] text-[#00f0ff] font-bold">OPERADORES ACTIVOS</label>
+                            <div class="flex gap-2">
+                                <button type="button" class="text-[9px] text-[#00f0ff] underline font-bold" onclick="toggleSelectAll('employeesList', true)">Todos</button>
+                                <button type="button" class="text-[9px] text-slate-400 underline" onclick="toggleSelectAll('employeesList', false)">Ninguno</button>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-end">
+                            <label class="font-cyber-title text-[11px] text-[#00f0ff] font-bold">VEHÍCULOS ACTIVOS</label>
+                            <div class="flex gap-2">
+                                <button type="button" class="text-[9px] text-[#00f0ff] underline font-bold" onclick="toggleSelectAll('vehiclesList', true)">Todos</button>
+                                <button type="button" class="text-[9px] text-slate-400 underline" onclick="toggleSelectAll('vehiclesList', false)">Ninguno</button>
+                            </div>
+                        </div>
+
+                        <!-- Row 2: Search Inputs -->
+                        <div>
                             <input type="text" class="w-full cyber-input text-[11px] px-3 py-1.5 rounded" placeholder="Filtrar rutas..." id="searchRoutes">
-                            <div class="bg-black/40 border border-white/10 rounded-lg h-40 overflow-y-auto terminal-scroll p-2 space-y-1" id="routesList">
-                                <span class="text-slate-500 text-xs">Cargando rutas...</span>
-                            </div>
-                            <div class="text-slate-400 font-mono text-[10px] mt-1 text-right font-bold" id="routesCounter">
-                                0 de 0 seleccionados
-                            </div>
                         </div>
-
-                        <div class="space-y-3">
-                            <div class="flex justify-between items-end">
-                                <label class="font-cyber-title text-[11px] text-[#00f0ff] font-bold">OPERADORES ACTIVOS</label>
-                                <div class="flex gap-2">
-                                    <button type="button" class="text-[9px] text-[#00f0ff] underline font-bold" onclick="toggleSelectAll('employeesList', true)">Todos</button>
-                                    <button type="button" class="text-[9px] text-slate-400 underline" onclick="toggleSelectAll('employeesList', false)">Ninguno</button>
-                                </div>
-                            </div>
+                        <div>
                             <input type="text" class="w-full cyber-input text-[11px] px-3 py-1.5 rounded" placeholder="Filtrar operadores..." id="searchEmployees">
-                            <div class="bg-black/40 border border-white/10 rounded-lg h-40 overflow-y-auto terminal-scroll p-2 space-y-1" id="employeesList">
-                                <span class="text-slate-500 text-xs">Cargando operadores...</span>
-                            </div>
-                            <div class="text-slate-400 font-mono text-[10px] mt-1 text-right font-bold" id="employeesCounter">
-                                0 de 0 seleccionados
-                            </div>
+                        </div>
+                        <div>
+                            <input type="text" class="w-full cyber-input text-[11px] px-3 py-1.5 rounded" placeholder="Filtrar vehículos..." id="searchVehicles">
                         </div>
 
-                        <div class="space-y-3">
-                            <div class="flex justify-between items-end">
-                                <label class="font-cyber-title text-[11px] text-[#00f0ff] font-bold">VEHÍCULOS ACTIVOS</label>
-                                <div class="flex gap-2">
-                                    <button type="button" class="text-[9px] text-[#00f0ff] underline font-bold" onclick="toggleSelectAll('vehiclesList', true)">Todos</button>
-                                    <button type="button" class="text-[9px] text-slate-400 underline" onclick="toggleSelectAll('vehiclesList', false)">Ninguno</button>
-                                </div>
-                            </div>
-                            <input type="text" class="w-full cyber-input text-[11px] px-3 py-1.5 rounded" placeholder="Filtrar vehículos..." id="searchVehicles">
-                            <div class="bg-black/40 border border-white/10 rounded-lg h-40 overflow-y-auto terminal-scroll p-2 space-y-1" id="vehiclesList">
-                                <span class="text-slate-500 text-xs">Cargando vehículos...</span>
-                            </div>
-                            <div class="text-slate-400 font-mono text-[10px] mt-1 text-right font-bold" id="vehiclesCounter">
-                                0 de 0 seleccionados
-                            </div>
+                        <!-- Row 3: Material Filters / Spacers -->
+                        <div class="flex gap-1 flex-wrap items-center mt-1" id="routeMaterialFilter">
+                            <button type="button" class="route-mat-btn active text-[9px] px-2 py-0.5 rounded font-bold border" data-mat="all" onclick="filterRoutesByMaterial('all')">TODOS</button>
+                            <button type="button" class="route-mat-btn text-[9px] px-2 py-0.5 rounded font-bold border" data-mat="1" onclick="filterRoutesByMaterial(1)" style="color:#ffd700;border-color:rgba(255,215,0,0.4);background:rgba(255,215,0,0.07)">MINERAL</button>
+                            <button type="button" class="route-mat-btn text-[9px] px-2 py-0.5 rounded font-bold border" data-mat="2" onclick="filterRoutesByMaterial(2)" style="color:#ff6432;border-color:rgba(255,100,50,0.4);background:rgba(255,100,50,0.07)">ESTÉRIL</button>
+                            <button type="button" class="route-mat-btn text-[9px] px-2 py-0.5 rounded font-bold border" data-mat="3" onclick="filterRoutesByMaterial(3)" style="color:#00c8b4;border-color:rgba(0,200,180,0.4);background:rgba(0,200,180,0.07)">AMBOS</button>
+                        </div>
+                        <div></div>
+                        <div></div>
+
+                        <!-- Row 4: Lists -->
+                        <div class="bg-black/40 border border-white/10 rounded-lg h-40 overflow-y-auto terminal-scroll p-2 space-y-1 mt-1" id="routesList">
+                            <span class="text-slate-500 text-xs">Cargando rutas...</span>
+                        </div>
+                        <div class="bg-black/40 border border-white/10 rounded-lg h-40 overflow-y-auto terminal-scroll p-2 space-y-1 mt-1" id="employeesList">
+                            <span class="text-slate-500 text-xs">Cargando operadores...</span>
+                        </div>
+                        <div class="bg-black/40 border border-white/10 rounded-lg h-40 overflow-y-auto terminal-scroll p-2 space-y-1 mt-1" id="vehiclesList">
+                            <span class="text-slate-500 text-xs">Cargando vehículos...</span>
+                        </div>
+
+                        <!-- Row 5: Counters -->
+                        <div class="text-slate-400 font-mono text-[10px] mt-1 text-right font-bold" id="routesCounter">
+                            0 de 0 seleccionados
+                        </div>
+                        <div class="text-slate-400 font-mono text-[10px] mt-1 text-right font-bold" id="employeesCounter">
+                            0 de 0 seleccionados
+                        </div>
+                        <div class="text-slate-400 font-mono text-[10px] mt-1 text-right font-bold" id="vehiclesCounter">
+                            0 de 0 seleccionados
                         </div>
                     </div>
 
@@ -355,7 +457,7 @@
         </div>
 
         <!-- Right Side: Server Status & Actions -->
-        <div class="col-span-12 lg:col-span-4 space-y-gutter">
+        <div class="col-span-12 lg:col-span-4 space-y-6">
             <div class="cyber-card rounded-lg p-6 h-full flex flex-col justify-between">
                 <div>
                     <div class="flex items-center justify-between mb-6">
@@ -437,8 +539,8 @@
                     <div class="border-2 border-dashed border-white/10 rounded-lg p-6 flex flex-col items-center justify-center bg-black/30 hover:bg-black/50 transition-all cursor-pointer group" id="dropzone">
                         <span class="material-symbols-outlined text-[#00f0ff] text-4xl mb-2 group-hover:scale-110 transition-transform" style="text-shadow: 0 0 10px rgba(0, 240, 255, 0.3);">cloud_upload</span>
                         <p class="text-[12px] text-center text-slate-300 group-hover:text-white transition-colors font-medium">Suelte el archivo Excel aquí o haga clic para buscar</p>
-                        <input type="file" id="excelFile" style="opacity: 0; width: 0; height: 0; position: absolute; pointer-events: none;" accept=".xlsx, .xls">
                     </div>
+                    <input type="file" id="excelFile" style="display: none;" accept=".xlsx, .xls">
                     <div id="uploadStatus" class="mt-2 text-center text-[12px]"></div>
                 </div>
 
@@ -461,8 +563,13 @@
                         <span class="material-symbols-outlined text-[#00f0ff] text-[24px]">history</span>
                         <h3 class="font-cyber-title text-base font-bold text-[#00f0ff] tracking-wider uppercase" style="text-shadow: 0 0 5px rgba(0, 240, 255, 0.3);">ÚLTIMOS ACARREOS REGISTRADOS LOCALMENTE</h3>
                     </div>
-                    <div class="flex gap-4">
-                        <span class="text-[10px] font-mono text-[#39ff14] border border-[#39ff14]/30 px-2.5 py-1 rounded bg-[#39ff14]/5 uppercase tracking-wider font-bold">VISTA ÚLTIMOS 100</span>
+                    <div class="flex items-center gap-3">
+                        <span class="text-[10px] font-cyber-title text-slate-400 uppercase tracking-wider font-bold">MOSTRAR:</span>
+                        <div class="flex rounded border border-white/10 p-0.5 bg-black/40" id="haulageLimitSelector">
+                            <button type="button" class="px-2.5 py-1 text-[10px] font-mono rounded text-slate-400 hover:text-white transition-all font-bold" data-limit="20">20</button>
+                            <button type="button" class="px-2.5 py-1 text-[10px] font-mono rounded text-slate-400 hover:text-white transition-all font-bold" data-limit="50">50</button>
+                            <button type="button" class="px-2.5 py-1 text-[10px] font-mono rounded text-[#39ff14] bg-[#39ff14]/10 border border-[#39ff14]/20 transition-all font-bold" data-limit="100">100</button>
+                        </div>
                     </div>
                 </div>
                 <div class="overflow-x-auto">
@@ -473,6 +580,7 @@
                                 <th class="px-6 py-4">VEHÍCULO</th>
                                 <th class="px-6 py-4">OPERADOR</th>
                                 <th class="px-6 py-4">RUTA</th>
+                                <th class="px-6 py-4">MATERIAL</th>
                                 <th class="px-6 py-4">TONELADAS</th>
                                 <th class="px-6 py-4">FECHA DE ACARREO</th>
                                 <th class="px-6 py-4">COMENTARIOS</th>
@@ -480,7 +588,7 @@
                         </thead>
                         <tbody class="divide-y divide-white/5 font-mono text-[13px] text-slate-200" id="latestHaulagesTableBody">
                             <tr>
-                                <td colspan="7" class="px-6 py-8 text-center text-slate-500 font-sans">Cargando registros de acarreos locales...</td>
+                                <td colspan="8" class="px-6 py-8 text-center text-slate-500 font-sans">Cargando registros de acarreos locales...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -593,4 +701,4 @@
 </div>
 
 <!-- Scripts (dx references removed from layout, handled here) -->
-<script src="@Url.Content("~/js/gene.js?v=2.1")"></script>
+<script src="~/js/gene_v2.js" asp-append-version="true"></script>

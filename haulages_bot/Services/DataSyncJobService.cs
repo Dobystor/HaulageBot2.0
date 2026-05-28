@@ -280,7 +280,7 @@ public class DataSyncJobService : IHostedService, IDisposable
         var tonnageWeight = configService.GetRandomTonnageWeight(vehicleCapacity);
 
         // Resolver materialTypeId en función del tipo de material de la ruta
-        int resolvedMaterialTypeId = await ResolveMaterialTypeId(context, server.Id, routeDetail.selectedMaterialType);
+        int resolvedMaterialTypeId = await ResolveMaterialTypeId(context, server.Id, routeDetail.selectedMaterialType, routeDetail.materialTypeId);
 
         var acarreo = new
         {
@@ -337,7 +337,7 @@ public class DataSyncJobService : IHostedService, IDisposable
     /// Resuelve el materialTypeId correcto para un acarreo en función del tipo de material de la ruta.
     /// 1=Mineral, 2=Estéril/Desmonte, 3=Ambos (aleatorio).
     /// </summary>
-    private async Task<int> ResolveMaterialTypeId(dbboot context, int serverId, int selectedMaterialType)
+    private async Task<int> ResolveMaterialTypeId(dbboot context, int serverId, int selectedMaterialType, int? routeMaterialTypeId)
     {
         try
         {
@@ -348,41 +348,34 @@ public class DataSyncJobService : IHostedService, IDisposable
             if (!materials.Any())
                 return 1; // Fallback si no hay materiales sincronizados
 
-            // Buscar materiales de tipo mineral y estéril por nombre
-            var mineralMats = materials.Where(m =>
-                m.name.ToUpperInvariant().Contains("MINERAL")).ToList();
-            var esterilMats = materials.Where(m =>
+            // Encontrar materiales por nombre en la DB (MINERAL, DESMONTE, TEPETATE, TAILS, etc.)
+            var mineralMat = materials.FirstOrDefault(m =>
+                m.name.ToUpperInvariant().Contains("MINERAL"));
+            var desmonteMat = materials.FirstOrDefault(m =>
                 m.name.ToUpperInvariant().Contains("DESMONTE") ||
                 m.name.ToUpperInvariant().Contains("ESTERIL") ||
-                m.name.ToUpperInvariant().Contains("ESTÉRIL") ||
-                m.name.ToUpperInvariant().Contains("ESTERIL")).ToList();
+                m.name.ToUpperInvariant().Contains("EST\u00c9RIL"));
 
-            // Si no encontramos por nombre específico, usar el primero disponible
-            if (!mineralMats.Any() && !esterilMats.Any())
-                return materials.First().materialTypeId;
+            // IDs reales de mineral y desmonte
+            int mineralId = mineralMat?.materialTypeId ?? materials.First().materialTypeId;
+            int desmonteId = desmonteMat?.materialTypeId ?? mineralId;
 
-            int resolvedType = selectedMaterialType;
-
-            // Si es tipo 3 (Ambos), elegir aleatoriamente entre mineral y estéril
-            if (resolvedType == 3)
+            int specificEsterilId = desmonteId;
+            if (routeMaterialTypeId.HasValue && routeMaterialTypeId.Value != 0 && routeMaterialTypeId.Value != mineralId)
             {
-                resolvedType = _random.Next(2) == 0 ? 1 : 2;
+                specificEsterilId = routeMaterialTypeId.Value;
             }
 
-            if (resolvedType == 2)
+            switch (selectedMaterialType)
             {
-                if (esterilMats.Any())
-                    return esterilMats[_random.Next(esterilMats.Count)].materialTypeId;
-                // Fallback a mineral si no hay estéril
-                if (mineralMats.Any())
-                    return mineralMats[_random.Next(mineralMats.Count)].materialTypeId;
+                case 1:
+                    return specificEsterilId;
+                case 2:
+                    return _random.Next(2) == 0 ? mineralId : specificEsterilId;
+                case 0:
+                default:
+                    return mineralId;
             }
-
-            // Default: tipo 1 = Mineral
-            if (mineralMats.Any())
-                return mineralMats[_random.Next(mineralMats.Count)].materialTypeId;
-
-            return materials.First().materialTypeId;
         }
         catch (Exception ex)
         {

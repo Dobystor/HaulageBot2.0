@@ -41,15 +41,14 @@ namespace haulages_bot.Controllers
                 
                 // Agregamos las cabeceras necesarias legibles para humanos
                 worksheet.Cell(1, 1).Value = "Vehículo (No. Económico)";
-                worksheet.Cell(1, 2).Value = "Empleado (No. Económico)";
-                worksheet.Cell(1, 3).Value = "Empleado (Nombre Completo)";
-                worksheet.Cell(1, 4).Value = "Ruta (Descripción)";
-                worksheet.Cell(1, 5).Value = "Peso (Toneladas)";
-                worksheet.Cell(1, 6).Value = "Material (Nombre)";
-                worksheet.Cell(1, 7).Value = "Fecha de Acarreo (YYYY-MM-DD HH:MM:SS)";
+                worksheet.Cell(1, 2).Value = "Empleado (Nombre Completo)";
+                worksheet.Cell(1, 3).Value = "Ruta (Descripción)";
+                worksheet.Cell(1, 4).Value = "Peso (Toneladas)";
+                worksheet.Cell(1, 5).Value = "Material (Nombre)";
+                worksheet.Cell(1, 6).Value = "Fecha de Acarreo (YYYY-MM-DD HH:MM:SS)";
                 
                 // Formato básico a cabeceras
-                var headerRange = worksheet.Range("A1:G1");
+                var headerRange = worksheet.Range("A1:F1");
                 headerRange.Style.Font.Bold = true;
                 headerRange.Style.Fill.BackgroundColor = XLColor.LightBlue;
                 worksheet.Columns().AdjustToContents();
@@ -110,7 +109,6 @@ namespace haulages_bot.Controllers
                         }
 
                         string vehicleCode = "";
-                        string employeeNo = "";
                         string employeeName = "";
                         string routeDescription = "";
                         decimal weight = 0;
@@ -120,26 +118,25 @@ namespace haulages_bot.Controllers
                         try
                         {
                             vehicleCode = row.Cell(1).GetString().Trim();
-                            employeeNo = row.Cell(2).GetString().Trim();
-                            employeeName = row.Cell(3).GetString().Trim();
-                            routeDescription = row.Cell(4).GetString().Trim();
+                            employeeName = row.Cell(2).GetString().Trim();
+                            routeDescription = row.Cell(3).GetString().Trim();
 
                             // Obtener peso
-                            if (row.Cell(5).DataType == XLDataType.Number) {
-                                weight = row.Cell(5).GetValue<decimal>();
+                            if (row.Cell(4).DataType == XLDataType.Number) {
+                                weight = row.Cell(4).GetValue<decimal>();
                             } else {
-                                decimal.TryParse(row.Cell(5).GetString(), out weight);
+                                decimal.TryParse(row.Cell(4).GetString(), out weight);
                             }
 
-                            materialName = row.Cell(6).GetString().Trim();
+                            materialName = row.Cell(5).GetString().Trim();
 
                             // Obtener fecha
                             DateTime dateOfCarries;
-                            if (row.Cell(7).DataType == XLDataType.DateTime) {
-                                dateOfCarries = row.Cell(7).GetDateTime();
+                            if (row.Cell(6).DataType == XLDataType.DateTime) {
+                                dateOfCarries = row.Cell(6).GetDateTime();
                                 dateStr = dateOfCarries.ToString("yyyy-MM-dd HH:mm:ss");
                             } else {
-                                dateStr = row.Cell(7).GetString().Trim();
+                                dateStr = row.Cell(6).GetString().Trim();
                                 if (!DateTime.TryParse(dateStr, out dateOfCarries))
                                     dateOfCarries = DateTime.Now;
                             }
@@ -150,21 +147,15 @@ namespace haulages_bot.Controllers
                                 v.EconomicNumber.ToLower() == vehicleCode.ToLower());
                             if (vehicle == null) throw new Exception($"Vehículo '{vehicleCode}' no encontrado.");
 
-                            // 2. Resolver empleado por NoEmployee o FullName
+                            // 2. Resolver empleado por Nombre Completo (ya no viene columna de número económico)
                             Employee employee = null;
-                            if (decimal.TryParse(employeeNo, out decimal noEmp))
-                            {
-                                employee = await _dbContext.Employees.FirstOrDefaultAsync(e => 
-                                    e.ServerConfigId == serverId && 
-                                    e.NoEmployee == noEmp);
-                            }
-                            if (employee == null && !string.IsNullOrEmpty(employeeName))
+                            if (!string.IsNullOrEmpty(employeeName))
                             {
                                 employee = await _dbContext.Employees.FirstOrDefaultAsync(e => 
                                     e.ServerConfigId == serverId && 
                                     e.FullName.ToLower() == employeeName.ToLower());
                             }
-                            if (employee == null) throw new Exception($"Empleado con No. Económico '{employeeNo}' o Nombre '{employeeName}' no encontrado.");
+                            if (employee == null) throw new Exception($"Empleado con Nombre '{employeeName}' no encontrado.");
 
                             // 3. Resolver ruta por descripción
                             var route = await _dbContext.Routes.FirstOrDefaultAsync(r => 
@@ -253,7 +244,7 @@ namespace haulages_bot.Controllers
                                 {
                                     RowNumber = row.RowNumber(),
                                     VehicleCode = vehicleCode,
-                                    EmployeeNo = employeeNo,
+                                    EmployeeNo = "",
                                     EmployeeName = employeeName,
                                     RouteDescription = routeDescription,
                                     Weight = weight,
@@ -270,7 +261,7 @@ namespace haulages_bot.Controllers
                             {
                                 RowNumber = row.RowNumber(),
                                 VehicleCode = vehicleCode,
-                                EmployeeNo = employeeNo,
+                                EmployeeNo = "",
                                 EmployeeName = employeeName,
                                 RouteDescription = routeDescription,
                                 Weight = weight,
@@ -327,13 +318,20 @@ namespace haulages_bot.Controllers
                             e.ServerConfigId == serverId && 
                             e.NoEmployee == noEmp);
                     }
+                    else if (!string.IsNullOrEmpty(empNoCell))
+                    {
+                        employee = await _dbContext.Employees.FirstOrDefaultAsync(e => 
+                            e.ServerConfigId == serverId && 
+                            e.FullName.ToLower() == empNoCell.ToLower());
+                    }
+
                     if (employee == null && !string.IsNullOrEmpty(empNameCell))
                     {
                         employee = await _dbContext.Employees.FirstOrDefaultAsync(e => 
                             e.ServerConfigId == serverId && 
                             e.FullName.ToLower() == empNameCell.ToLower());
                     }
-                    if (employee == null) throw new Exception($"Empleado con No. Económico '{empNoCell}' o Nombre '{empNameCell}' no encontrado.");
+                    if (employee == null) throw new Exception($"Empleado con Nombre '{empNameCell}' no encontrado.");
 
                     var route = await _dbContext.Routes.FirstOrDefaultAsync(r => 
                         r.ServerConfigId == serverId && 

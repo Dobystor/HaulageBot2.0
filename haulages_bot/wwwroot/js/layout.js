@@ -1,20 +1,31 @@
 document.addEventListener("DOMContentLoaded", function () {
     let _tzOffsetHours = 0; // Se carga del API al inicializar
+    let _lastLoadedServerId = null; // Detectar cuando cambia el servidor activo
 
-    // Cargar offset de zona horaria al inicializar
+    // Cargar offset de zona horaria
     async function loadTimezoneOffset() {
+        const activeServerId = localStorage.getItem('activeServerId');
+        
+        // Si el servidor cambió (o es la primera carga), limpiar la caché local
+        if (activeServerId !== _lastLoadedServerId) {
+            localStorage.removeItem('globalTimezoneOffset');
+            _lastLoadedServerId = activeServerId;
+        }
+
         let savedOffset = localStorage.getItem('globalTimezoneOffset');
         if (savedOffset !== null) {
             _tzOffsetHours = parseInt(savedOffset, 10);
             if (isNaN(_tzOffsetHours)) _tzOffsetHours = 0;
             
-            // Sincronizar el input en la barra lateral
+            // Sincronizar el input en la barra lateral si el usuario no lo está editando
             const input = document.getElementById('globalTimezoneOffsetInput');
-            if (input) input.value = _tzOffsetHours;
+            if (input && document.activeElement !== input) {
+                input.value = _tzOffsetHours;
+            }
             return;
         }
 
-        const activeServerId = localStorage.getItem('activeServerId');
+        // Consultar el API
         try {
             const url = activeServerId
                 ? `/api/ServerConfig/timezone?serverId=${activeServerId}`
@@ -25,9 +36,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 _tzOffsetHours = data.offsetHours || 0;
                 localStorage.setItem('globalTimezoneOffset', _tzOffsetHours);
                 
-                // Sincronizar el input en la barra lateral
+                // Sincronizar el input en la barra lateral si el usuario no lo está editando
                 const input = document.getElementById('globalTimezoneOffsetInput');
-                if (input) input.value = _tzOffsetHours;
+                if (input && document.activeElement !== input) {
+                    input.value = _tzOffsetHours;
+                }
             }
         } catch(e) {
             console.warn('No se pudo cargar el offset de timezone:', e);
@@ -52,8 +65,18 @@ document.addEventListener("DOMContentLoaded", function () {
             this.value = val;
             _tzOffsetHours = val;
             localStorage.setItem('globalTimezoneOffset', val);
+
+            // Guardar en el servidor (BD) para que persista al recargar
+            const activeServerId = localStorage.getItem('activeServerId');
+            if (activeServerId) {
+                fetch(`/api/ServerConfig/${activeServerId}/timezone`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ offsetHours: val })
+                }).catch(e => console.warn('No se pudo guardar timezone en servidor:', e));
+            }
             
-            // Refrescar el timer
+            // Refrescar el timer (sin recargar el offset del servidor)
             fetchNextRunTime();
             
             // Notificar a otras vistas
@@ -116,9 +139,6 @@ document.addEventListener("DOMContentLoaded", function () {
             updateTimerUI(null, "Desactivado");
             return;
         }
-
-        // Re-cargar offset por si cambió el servidor activo
-        await loadTimezoneOffset();
 
         try {
             const response = await fetch(`/api/sync/nextRunTime?serverId=${activeServerId}`);
@@ -278,7 +298,9 @@ document.addEventListener("DOMContentLoaded", function () {
     connection.start().catch((err) => console.error(err));
 
     // Registrar globalmente para que gene.js pueda dispararlo al cambiar de servidor
-    window.refreshLayoutTimer = () => loadTimezoneOffset().then(() => fetchNextRunTime());
+    window.refreshLayoutTimer = () => {
+        return loadTimezoneOffset().then(() => fetchNextRunTime());
+    };
 });
 
 // Función para mostrar/ocultar el sidebar

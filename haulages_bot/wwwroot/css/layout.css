@@ -1,17 +1,31 @@
-/* Cyberpunk Glassmorphism Global Layout CSS */
+/* ============================================================
+   SMARTFLOW MULTI-BOT — PREMIUM CYBER-DARK DESIGN SYSTEM
+   Global Layout CSS
+   ============================================================ */
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Orbitron:wght@400;700;900&display=swap');
 
 :root {
-    --bg-main: #001828;
-    --card-bg: #002b49;
-    --card-border: rgba(193, 197, 200, 0.15);
-    --sidebar-bg: #002237;
-    --text-primary: #f8fafc;
-    --text-secondary: #c1c5c8;
-    --neon-cyan: #0a5da7;
-    --neon-pink: #ef4444;
-    --neon-purple: #36b0c9;
-    --neon-green: #22c55e;
+    --bg-main:    #050d1a;
+    --card-bg:    #0b1628;
+    --card-border: rgba(100, 160, 255, 0.12);
+    --sidebar-bg: #080f1e;
+    --text-primary: #e8f0ff;
+    --text-secondary: #7a90b8;
+
+    /* Neon palette */
+    --neon-cyan:   #00d4ff;
+    --neon-blue:   #1e6fff;
+    --neon-purple: #a259ff;
+    --neon-pink:   #ff3c6e;
+    --neon-green:  #00e896;
+    --neon-yellow: #ffe94d;
+
+    /* Glow variants */
+    --glow-cyan:   0 0 12px rgba(0, 212, 255, 0.45);
+    --glow-blue:   0 0 12px rgba(30, 111, 255, 0.45);
+    --glow-green:  0 0 12px rgba(0, 232, 150, 0.45);
+    --glow-pink:   0 0 12px rgba(255, 60, 110, 0.45);
+
     --font-sans: 'Inter', sans-serif;
     --font-future: 'Inter', sans-serif;
 }
@@ -24,44 +38,56 @@ body {
     margin: 0;
 }
 
-/* Sidebar Styling */
+/* ============================================================
+   SIDEBAR
+   ============================================================ */
 .sidebar {
     height: 100vh;
     width: 250px;
     position: fixed;
     top: 0;
     left: 0;
-    background: var(--sidebar-bg);
-    backdrop-filter: blur(16px);
-    border-right: 1px solid var(--card-border);
-    padding-top: 80px; /* Espacio para el navbar fijo */
+    background: linear-gradient(180deg, #08101f 0%, #060d1c 100%);
+    backdrop-filter: blur(20px);
+    border-right: 1px solid rgba(0, 212, 255, 0.1);
+    padding-top: 80px;
     z-index: 100;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     transform: translateX(-100%);
     display: flex;
     flex-direction: column;
-    box-shadow: 10px 0 30px rgba(0, 0, 0, 0.5);
+    box-shadow: 4px 0 40px rgba(0, 0, 0, 0.6);
 }
 
-.sidebar.active {
-    transform: translateX(0);
+.sidebar::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--neon-blue), var(--neon-cyan), var(--neon-purple));
+    opacity: 0.6;
 }
+
+.sidebar.active { transform: translateX(0); }
 
 .sidebar a {
-    padding: 14px 24px;
+    padding: 13px 22px;
     text-decoration: none;
-    font-size: 16px;
-    font-weight: 600;
+    font-size: 14px;
+    font-weight: 500;
     color: var(--text-secondary);
     display: flex;
     align-items: center;
     gap: 12px;
     transition: all 0.2s ease;
     border-left: 3px solid transparent;
+    position: relative;
 }
 
 .sidebar a:hover {
-    background: rgba(10, 93, 167, 0.15);
+    background: rgba(0, 212, 255, 0.06);
     color: var(--neon-cyan);
     border-left-color: var(--neon-cyan);
     padding-left: 28px;
@@ -72,64 +98,63 @@ body {
     transition: transform 0.3s ease;
 }
 
-.sidebar a:hover i {
-    transform: scale(1.2);
-}
+.sidebar a:hover i { transform: scale(1.2); }
 
-/* Main Content Adjustment */
+/* ============================================================
+   MAIN CONTENT
+   ============================================================ */
 .main-content {
     margin-left: 0;
-    padding: 100px 30px 60px 30px; /* Padding superior para el navbar */
+    padding: 100px 30px 60px 30px;
     transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     min-height: calc(100vh - 60px);
     display: flex;
     flex-direction: column;
 }
 
-.main-content.shift {
-    margin-left: 250px;
-}
+.main-content.shift { margin-left: 250px; }
 
-/* Navbar Styling */
+/* ============================================================
+   NAVBAR
+   ============================================================ */
 .navbar {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 70px;
-    background: var(--sidebar-bg) !important;
-    backdrop-filter: blur(16px);
-    border-bottom: 1px solid var(--card-border) !important;
+    background: rgba(5, 13, 26, 0.92) !important;
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(0, 212, 255, 0.1) !important;
     z-index: 1030;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(0, 212, 255, 0.08);
 }
 
-.navbar-brand img {
-    height: 38px;
-}
+.navbar-brand img { height: 38px; }
 
 .btn-dark {
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.08);
     color: #fff;
     transition: all 0.3s;
 }
 
 .btn-dark:hover {
-    background: rgba(10, 93, 167, 0.15);
+    background: rgba(0, 212, 255, 0.08);
     border-color: var(--neon-cyan);
     color: var(--neon-cyan);
+    box-shadow: var(--glow-cyan);
 }
 
-/* Refresh / Loading overlay */
+/* ============================================================
+   LOADING SCREENS
+   ============================================================ */
 .loading-screen-refresh {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(6, 9, 19, 0.9);
-    backdrop-filter: blur(10px);
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-color: rgba(3, 8, 20, 0.95);
+    backdrop-filter: blur(12px);
     z-index: 1050;
     display: flex;
     align-items: center;
@@ -138,10 +163,9 @@ body {
 
 .progress-bar-container {
     position: fixed;
-    top: 0;
-    left: 0;
+    top: 0; left: 0;
     height: 3px;
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: rgba(255, 255, 255, 0.04);
     overflow: hidden;
     width: 100%;
     z-index: 1060;
@@ -150,8 +174,9 @@ body {
 .progress-bar {
     width: 0;
     height: 100%;
-    background-color: var(--neon-cyan);
+    background: linear-gradient(90deg, var(--neon-blue), var(--neon-cyan));
     animation: loadProgress 2s ease infinite;
+    box-shadow: 0 0 8px var(--neon-cyan);
 }
 
 @keyframes loadProgress {
@@ -160,11 +185,13 @@ body {
     100% { width: 100%; transform: translateX(110%); }
 }
 
-/* Footer Styling */
+/* ============================================================
+   FOOTER
+   ============================================================ */
 .footer {
-    background: rgba(13, 20, 35, 0.9) !important;
+    background: rgba(5, 13, 26, 0.9) !important;
     backdrop-filter: blur(16px);
-    border-top: 1px solid var(--card-border) !important;
+    border-top: 1px solid rgba(0, 212, 255, 0.08) !important;
     color: var(--text-secondary) !important;
     text-align: center;
     padding: 20px 0;
@@ -172,17 +199,16 @@ body {
     font-size: 0.85rem;
 }
 
-/* Notifications Bell & Popup */
+/* ============================================================
+   NOTIFICATIONS BELL & POPUP
+   ============================================================ */
 #notificationBell {
     position: relative;
     border-radius: 50%;
-    width: 38px;
-    height: 38px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    width: 38px; height: 38px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0, 212, 255, 0.05);
+    border: 1px solid rgba(0, 212, 255, 0.15);
     color: #fff;
     transition: all 0.3s;
 }
@@ -190,26 +216,26 @@ body {
 #notificationBell:hover {
     border-color: var(--neon-cyan);
     color: var(--neon-cyan);
+    box-shadow: var(--glow-cyan);
 }
 
 .notification-popup {
     position: fixed !important;
-    top: 80px;
-    right: 20px;
+    top: 80px; right: 20px;
     width: 360px;
-    background: var(--card-bg) !important;
-    backdrop-filter: blur(25px);
-    border: 1px solid var(--card-border) !important;
-    border-radius: 12px;
+    background: rgba(8, 14, 30, 0.97) !important;
+    backdrop-filter: blur(30px);
+    border: 1px solid rgba(0, 212, 255, 0.15) !important;
+    border-radius: 16px;
     z-index: 1050;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), var(--glow-cyan);
     color: #fff;
     overflow: hidden;
 }
 
 .notification-popup .card-header {
     background: rgba(0, 0, 0, 0.4) !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-bottom: 1px solid rgba(0, 212, 255, 0.1) !important;
     padding: 15px 20px;
     font-family: var(--font-future);
     font-size: 0.9rem;
@@ -221,33 +247,23 @@ body {
 }
 
 .notification-popup .card-header .close {
-    background: none;
-    border: none;
-    color: #fff;
-    font-size: 1.4rem;
-    cursor: pointer;
-    line-height: 1;
-    opacity: 0.7;
-    transition: opacity 0.2s;
+    background: none; border: none;
+    color: #fff; font-size: 1.4rem;
+    cursor: pointer; line-height: 1;
+    opacity: 0.7; transition: opacity 0.2s;
 }
 
-.notification-popup .card-header .close:hover {
-    opacity: 1;
-}
+.notification-popup .card-header .close:hover { opacity: 1; }
 
-.notification-popup .card-body {
-    padding: 20px;
-}
+.notification-popup .card-body { padding: 20px; }
 
-/* Clock / Time containers inside notification popup */
+/* Clock / Timer containers */
 .clock-container, .timer-container, .countdown-container {
-    background: rgba(0, 0, 0, 0.25) !important;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 8px;
-    padding: 12px;
-    margin-bottom: 12px;
+    background: rgba(0, 212, 255, 0.04) !important;
+    border: 1px solid rgba(0, 212, 255, 0.1);
+    border-radius: 10px;
+    padding: 12px; margin-bottom: 12px;
     text-align: center;
-    box-shadow: inset 0 2px 8px rgba(0,0,0,0.4);
 }
 
 .clock-container h5, .timer-container h5, .countdown-container h5 {
@@ -259,29 +275,28 @@ body {
 }
 
 #currentDateTime, #nextRunTimeFixed, #nextRunTimer {
-    font-size: 0.9rem;
-    font-weight: 600;
-    background: rgba(10, 93, 167, 0.08);
-    border: 1px solid rgba(10, 93, 167, 0.2);
+    font-size: 0.9rem; font-weight: 600;
+    background: rgba(0, 212, 255, 0.06);
+    border: 1px solid rgba(0, 212, 255, 0.2);
     color: var(--neon-cyan);
-    padding: 6px 12px;
-    border-radius: 6px;
-    width: fit-content;
-    margin: 0 auto;
+    padding: 6px 12px; border-radius: 8px;
+    width: fit-content; margin: 0 auto;
 }
 
 #nextRunTimer {
-    background: rgba(54, 176, 201, 0.08);
-    border-color: rgba(54, 176, 201, 0.2);
+    background: rgba(162, 89, 255, 0.08);
+    border-color: rgba(162, 89, 255, 0.2);
     color: var(--neon-purple);
 }
 
-/* Bootstrap Alert Overrides (SignalR Toast Notifications) */
+/* ============================================================
+   BOOTSTRAP ALERT OVERRIDES (SignalR Toasts)
+   ============================================================ */
 .alert {
-    background: rgba(13, 20, 35, 0.85) !important;
-    backdrop-filter: blur(12px);
-    border-radius: 10px !important;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+    background: rgba(5, 13, 26, 0.9) !important;
+    backdrop-filter: blur(16px);
+    border-radius: 12px !important;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6) !important;
     color: #fff !important;
     border-width: 1px !important;
     border-style: solid !important;
@@ -291,31 +306,23 @@ body {
 
 .alert-success {
     border-color: var(--neon-green) !important;
-    border-left: 5px solid var(--neon-green) !important;
+    border-left: 4px solid var(--neon-green) !important;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), var(--glow-green) !important;
 }
 
 .alert-danger {
     border-color: var(--neon-pink) !important;
-    border-left: 5px solid var(--neon-pink) !important;
+    border-left: 4px solid var(--neon-pink) !important;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), var(--glow-pink) !important;
 }
 
-/* Responsive adjustments */
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
 @media (max-width: 768px) {
-    .sidebar {
-        width: 70px;
-        transform: translateX(-70px);
-    }
-    .sidebar.active {
-        transform: translateX(0);
-        width: 220px;
-    }
-    .sidebar a span {
-        display: none;
-    }
-    .sidebar.active a span {
-        display: inline;
-    }
-    .main-content.shift {
-        margin-left: 70px;
-    }
+    .sidebar { width: 70px; transform: translateX(-70px); }
+    .sidebar.active { transform: translateX(0); width: 220px; }
+    .sidebar a span { display: none; }
+    .sidebar.active a span { display: inline; }
+    .main-content.shift { margin-left: 70px; }
 }

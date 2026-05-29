@@ -10,203 +10,534 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inicio de Sesión - SmartFlow Multi-Bot</title>
     
-    <!-- Inclusión de Bootstrap CSS & FontAwesome -->
+    <!-- Inclusión de Bootstrap CSS -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
     <style>
         :root {
-            --bg-main: #001828;
-            --card-bg: #002b49;
-            --card-border: rgba(193, 197, 200, 0.15);
-            --text-primary: #f8fafc;
-            --text-secondary: #c1c5c8;
-            --neon-cyan: #0a5da7;
-            --neon-pink: #ef4444;
-            --neon-purple: #36b0c9;
-            --font-sans: 'Inter', sans-serif;
-            --font-future: 'Inter', sans-serif;
+            --bg:        #050d1a;
+            --card-bg:   rgba(8, 16, 34, 0.88);
+            --border:    rgba(0, 212, 255, 0.15);
+            --text:      #e8f0ff;
+            --text-muted:#7a90b8;
+            --neon-cyan:   #00d4ff;
+            --neon-blue:   #1e6fff;
+            --neon-purple: #a259ff;
+            --neon-pink:   #ff3c6e;
+            --neon-green:  #00e896;
+            --glow-cyan:  0 0 20px rgba(0, 212, 255, 0.4);
+            --glow-blue:  0 0 20px rgba(30, 111, 255, 0.4);
+            --glow-pink:  0 0 20px rgba(255, 60, 110, 0.4);
         }
 
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
         body {
-            background-color: var(--bg-main);
-            color: var(--text-primary);
-            font-family: var(--font-sans);
+            background:
+                radial-gradient(ellipse at 15% 10%, rgba(0, 100, 200, 0.2) 0%, transparent 55%),
+                radial-gradient(ellipse at 85% 90%, rgba(120, 30, 180, 0.18) 0%, transparent 55%),
+                radial-gradient(ellipse at 50% 50%, rgba(0, 20, 60, 0.6) 0%, transparent 80%),
+                #050d1a;
+            color: var(--text);
+            font-family: 'Outfit', sans-serif;
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0;
             padding: 20px;
+            overflow: hidden;
+            position: relative;
         }
 
+        /* Animated grid bg */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(0, 212, 255, 0.025) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 212, 255, 0.025) 1px, transparent 1px);
+            background-size: 60px 60px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Floating orbs */
+        body::after {
+            content: '';
+            position: fixed;
+            width: 600px; height: 600px;
+            background: radial-gradient(circle, rgba(0, 212, 255, 0.06) 0%, transparent 70%);
+            border-radius: 50%;
+            top: -200px; left: -200px;
+            animation: float-orb 12s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        @@keyframes float-orb {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(60px, 40px) scale(1.1); }
+            66% { transform: translate(-30px, 60px) scale(0.95); }
+        }
+
+        /* ============================================================
+           LOGIN CARD
+           ============================================================ */
         .login-wrapper {
+            position: relative;
+            z-index: 1;
             background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-            border-radius: 12px;
-            padding: 40px;
+            border: 1px solid var(--border);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7),
+                        0 0 0 1px rgba(0, 212, 255, 0.05),
+                        inset 0 1px 0 rgba(0, 212, 255, 0.08);
+            border-radius: 20px;
+            padding: 44px 40px 36px;
             width: 100%;
-            max-width: 450px;
+            max-width: 440px;
             text-align: center;
-            transition: all 0.2s ease;
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            animation: card-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
         }
 
-        .login-wrapper:hover {
-            border-color: rgba(193, 197, 200, 0.3);
+        @@keyframes card-in {
+            from { opacity: 0; transform: translateY(24px) scale(0.97); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* Top accent line */
+        .login-wrapper::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 10%; right: 10%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--neon-cyan), var(--neon-blue), var(--neon-purple), transparent);
+            border-radius: 0 0 2px 2px;
+        }
+
+        /* Bottom glow */
+        .login-wrapper::after {
+            content: '';
+            position: absolute;
+            bottom: -40px; left: 10%; right: 10%;
+            height: 40px;
+            background: radial-gradient(ellipse, rgba(0, 212, 255, 0.15) 0%, transparent 70%);
+            pointer-events: none;
         }
 
         .brand-logo {
-            max-width: 200px;
-            margin-bottom: 25px;
+            max-width: 180px;
+            margin-bottom: 22px;
+            filter: drop-shadow(0 0 12px rgba(0, 212, 255, 0.3));
+            transition: filter 0.3s;
         }
+        .brand-logo:hover { filter: drop-shadow(0 0 20px rgba(0, 212, 255, 0.5)); }
 
         .login-title {
-            font-family: var(--font-sans);
-            font-weight: 800;
-            font-size: 1.8rem;
-            letter-spacing: 2px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            font-size: 1.45rem;
+            letter-spacing: 3px;
             text-transform: uppercase;
-            margin-bottom: 30px;
-            background: linear-gradient(135deg, #fff 30%, var(--neon-cyan) 100%);
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #fff 0%, var(--neon-cyan) 60%, var(--neon-blue) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 12px rgba(0, 212, 255, 0.35));
         }
 
-        /* Inputs & Input Groups */
+        .login-subtitle {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 32px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Section headings inside panels */
+        .panel-heading {
+            color: var(--text-muted);
+            font-size: 0.78rem;
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            margin-bottom: 16px;
+        }
+
+        /* ============================================================
+           SERVER CARDS
+           ============================================================ */
+        .server-list {
+            max-height: 260px;
+            overflow-y: auto;
+            padding-right: 4px;
+            margin-bottom: 16px;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0, 212, 255, 0.25) transparent;
+        }
+
+        .server-list::-webkit-scrollbar { width: 4px; }
+        .server-list::-webkit-scrollbar-thumb { background: rgba(0, 212, 255, 0.25); border-radius: 2px; }
+
+        .server-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 14px;
+            margin-bottom: 8px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(100, 160, 255, 0.1);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: left;
+        }
+
+        .server-card:hover {
+            background: rgba(0, 212, 255, 0.06);
+            border-color: rgba(0, 212, 255, 0.3);
+            box-shadow: 0 0 0 1px rgba(0, 212, 255, 0.1), var(--glow-cyan);
+            transform: translateX(2px);
+        }
+
+        .server-card-icon {
+            width: 32px; height: 32px;
+            background: rgba(0, 212, 255, 0.08);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--neon-cyan);
+            font-size: 13px;
+            flex-shrink: 0;
+            margin-right: 12px;
+            transition: all 0.2s;
+        }
+
+        .server-card:hover .server-card-icon {
+            background: rgba(0, 212, 255, 0.14);
+            box-shadow: 0 0 8px rgba(0, 212, 255, 0.25);
+        }
+
+        .server-card-name {
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 220px;
+        }
+
+        .server-card-url {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 220px;
+        }
+
+        .delete-server-btn {
+            background: transparent;
+            border: none;
+            color: rgba(255, 60, 110, 0.4);
+            font-size: 0.85rem;
+            padding: 4px 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-radius: 6px;
+            flex-shrink: 0;
+        }
+
+        .delete-server-btn:hover {
+            color: var(--neon-pink);
+            background: rgba(255, 60, 110, 0.08);
+            box-shadow: var(--glow-pink);
+        }
+
+        /* Empty state */
+        .empty-state {
+            padding: 24px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .empty-state i {
+            font-size: 1.8rem;
+            color: var(--neon-pink);
+            margin-bottom: 10px;
+            display: block;
+            opacity: 0.6;
+        }
+
+        /* ============================================================
+           INPUTS
+           ============================================================ */
         .input-group-text {
-            background: rgba(0, 0, 0, 0.4) !important;
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            background: rgba(0, 212, 255, 0.06) !important;
+            border: 1px solid rgba(0, 212, 255, 0.15) !important;
             border-right: none !important;
             color: var(--neon-cyan) !important;
             border-radius: 8px 0 0 8px !important;
-            font-size: 1rem;
-            width: 45px;
+            font-size: 0.9rem;
+            width: 44px;
             height: 48px !important;
             display: flex !important;
             align-items: center;
             justify-content: center;
         }
 
-        #serverUrl.custom-active {
-            border-radius: 0 !important;
-        }
-
-
         .form-control, .form-select, select.form-control {
-            background: rgba(0, 0, 0, 0.4) !important;
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
-            color: #fff !important;
+            background: rgba(8, 16, 34, 0.8) !important;
+            border: 1px solid rgba(100, 160, 255, 0.15) !important;
+            color: var(--text) !important;
             border-radius: 0 8px 8px 0 !important;
             height: 48px;
-            font-size: 0.95rem;
-            transition: all 0.3s;
-        }
-
-        select.form-control {
-            border-radius: 0 8px 8px 0 !important;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            backdrop-filter: blur(8px);
         }
 
         .form-control:focus, select.form-control:focus {
             border-color: var(--neon-cyan) !important;
-            box-shadow: 0 0 0 2px rgba(10, 93, 167, 0.25) !important;
+            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1) !important;
             outline: none;
-            background: rgba(0, 0, 0, 0.6) !important;
+            background: rgba(0, 212, 255, 0.03) !important;
         }
 
+        .form-control::placeholder { color: rgba(122, 144, 184, 0.6) !important; }
+
         #serverUrl.standalone {
-            border-radius: 8px !important;
+            border-radius: 10px !important;
             margin-top: 10px;
         }
 
-        /* Password visibility btn */
+        /* Password toggle */
         #togglePassword {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 212, 255, 0.05);
+            border: 1px solid rgba(0, 212, 255, 0.15);
             border-left: none;
-            color: var(--text-secondary);
+            color: var(--text-muted);
             border-radius: 0 8px 8px 0 !important;
             height: 48px;
-            transition: all 0.3s;
+            transition: all 0.2s;
         }
-        #togglePassword:hover {
-            color: #fff;
-            background: rgba(255, 255, 255, 0.1);
-        }
-        #password {
-            border-radius: 0 !important;
-        }
+        #togglePassword:hover { color: var(--neon-cyan); background: rgba(0, 212, 255, 0.08); }
+        #password { border-radius: 0 !important; }
+        #serverUrl.custom-active { border-radius: 0 !important; }
 
-        /* Neon Glow Button */
-        .neon-btn-submit {
-            background: transparent;
-            border: 1px solid var(--neon-cyan);
-            color: var(--neon-cyan);
-            font-family: var(--font-sans);
+        /* ============================================================
+           BUTTONS
+           ============================================================ */
+        .btn-add-server {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            height: 44px;
+            border: 1.5px dashed rgba(0, 232, 150, 0.3);
+            border-radius: 10px;
+            background: rgba(0, 232, 150, 0.04);
+            color: var(--neon-green);
+            font-size: 0.82rem;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 1px;
-            height: 48px;
-            border-radius: 8px;
-            transition: all 0.2s ease;
+            letter-spacing: 1.5px;
             cursor: pointer;
-            font-size: 1rem;
+            transition: all 0.2s;
+            margin-bottom: 4px;
         }
 
+        .btn-add-server:hover {
+            background: rgba(0, 232, 150, 0.09);
+            border-color: rgba(0, 232, 150, 0.5);
+            box-shadow: 0 0 16px rgba(0, 232, 150, 0.15);
+            color: var(--neon-green);
+        }
+
+        .neon-btn-submit {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            height: 48px;
+            border: 1px solid var(--neon-cyan);
+            border-radius: 10px;
+            background: rgba(0, 212, 255, 0.06);
+            color: var(--neon-cyan);
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.25s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .neon-btn-submit::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0), rgba(0, 212, 255, 0.12));
+            opacity: 0;
+            transition: opacity 0.25s;
+        }
+
+        .neon-btn-submit:hover::before { opacity: 1; }
         .neon-btn-submit:hover {
-            background: var(--neon-cyan);
+            box-shadow: var(--glow-cyan);
             color: #fff;
         }
 
-        .alert-cyber {
-            background: rgba(239, 68, 68, 0.1) !important;
-            border: 1px solid var(--neon-pink) !important;
-            color: #fff !important;
-            border-radius: 8px !important;
-            font-size: 0.85rem;
-            margin-top: 20px;
-            padding: 12px 15px;
+        .btn-cancel-dark {
+            width: 100%;
+            height: 44px;
+            border: 1px solid rgba(255, 60, 110, 0.25);
+            border-radius: 10px;
+            background: rgba(255, 60, 110, 0.04);
+            color: rgba(255, 60, 110, 0.8);
+            font-weight: 700;
+            font-size: 0.82rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.2s;
         }
 
+        .btn-cancel-dark:hover {
+            background: rgba(255, 60, 110, 0.09);
+            border-color: var(--neon-pink);
+            box-shadow: var(--glow-pink);
+            color: var(--neon-pink);
+        }
+
+        /* ============================================================
+           CONNECTING BANNER
+           ============================================================ */
+        .selected-server-banner {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            margin-bottom: 24px;
+            background: rgba(0, 212, 255, 0.05);
+            border: 1px solid rgba(0, 212, 255, 0.18);
+            border-radius: 10px;
+            text-align: left;
+        }
+
+        .selected-server-banner .banner-icon {
+            width: 36px; height: 36px;
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid rgba(0, 212, 255, 0.25);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--neon-cyan);
+            flex-shrink: 0;
+        }
+
+        .selected-server-banner .banner-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 2px;
+        }
+
+        .selected-server-banner .banner-name {
+            font-weight: 700;
+            color: var(--text);
+            font-size: 0.95rem;
+        }
+
+        .selected-server-banner .banner-url {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Back button */
+        .btn-back {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: var(--text-muted);
+            border-radius: 8px;
+            padding: 6px 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+        .btn-back:hover {
+            border-color: var(--neon-cyan);
+            color: var(--neon-cyan);
+        }
+
+        /* ============================================================
+           ERROR ALERT
+           ============================================================ */
+        .alert-cyber {
+            background: rgba(255, 60, 110, 0.08) !important;
+            border: 1px solid rgba(255, 60, 110, 0.3) !important;
+            border-left: 3px solid var(--neon-pink) !important;
+            color: var(--text) !important;
+            border-radius: 10px !important;
+            font-size: 0.82rem;
+            margin-top: 20px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: shake 0.4s ease;
+        }
+
+        @@keyframes shake {
+            0%,100% { transform: translateX(0); }
+            20%,60%  { transform: translateX(-5px); }
+            40%,80%  { transform: translateX(5px); }
+        }
+
+        /* ============================================================
+           FOOTER PARTNER LOGOS
+           ============================================================ */
         .footer-logos {
-            margin-top: 35px;
+            margin-top: 30px;
             display: flex;
             justify-content: center;
-            gap: 20px;
-            opacity: 0.6;
+            gap: 24px;
+            opacity: 0.4;
             transition: opacity 0.3s;
         }
 
-        .footer-logos:hover {
-            opacity: 0.9;
+        .footer-logos:hover { opacity: 0.7; }
+        .footer-logos img { max-height: 20px; filter: grayscale(1) brightness(2); }
+
+        /* Form labels */
+        .form-label-cyber {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 6px;
+            display: block;
+            text-align: left;
         }
 
-        .footer-logos img {
-            max-height: 24px;
-            filter: grayscale(1) brightness(1.5);
-        }
-        .server-card:hover {
-            background: rgba(10, 93, 167, 0.15) !important;
-            border-color: var(--neon-cyan) !important;
-        }
-        .delete-server-btn {
-            opacity: 0.5;
-        }
-        .delete-server-btn:hover {
-            opacity: 1 !important;
-            color: #ff0055 !important;
-            transform: scale(1.15);
-            filter: drop-shadow(0 0 5px rgba(255, 0, 85, 0.5));
-        }
-        .btn-link:focus {
-            box-shadow: none !important;
-            text-decoration: none !important;
-        }
+        .form-group { margin-bottom: 16px; }
     </style>
 </head>
 <body>
@@ -217,29 +548,31 @@
 
         <!-- Title -->
         <h1 class="login-title">Acceder al Nodo</h1>
+        <p class="login-subtitle">SmartFlow Multi-Bot</p>
 
         <!-- PANEL 1: Server Selection -->
         <div id="panel-server-selection">
-            <h2 class="mb-4" style="color: var(--text-secondary); font-size: 0.95rem; font-family: var(--font-future); letter-spacing: 1px; text-transform: uppercase;">Seleccionar Servidor</h2>
-            
-            <div id="server-cards-container" class="mb-4 text-left" style="max-height: 280px; overflow-y: auto; padding-right: 5px;">
+            <p class="panel-heading">Seleccionar Servidor</p>
+
+            <div id="server-cards-container" class="server-list">
                 @if (ViewBag.Servers != null && ((List<ServerConfig>)ViewBag.Servers).Count > 0)
                 {
                     @foreach (var s in (List<ServerConfig>)ViewBag.Servers)
                     {
-                        <div class="server-card d-flex justify-content-between align-items-center p-3 mb-2" 
-                             style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; cursor: pointer; transition: all 0.2s;"
-                             data-id="@s.Id" data-url="@s.ApiUrl" data-name="@s.Name" data-username="@s.Username" data-password="@s.Password"
+                        <div class="server-card"
+                             data-id="@s.Id" data-url="@s.ApiUrl" data-name="@s.Name"
+                             data-username="@s.Username" data-password="@s.Password"
                              onclick="selectServerCard(this)">
                             <div class="d-flex align-items-center">
-                                <i class="fas fa-server mr-3" style="color: var(--neon-cyan); font-size: 1.2rem;"></i>
-                                <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;">
-                                    <div style="font-weight: 600; color: #fff; font-size: 0.95rem;">@s.Name</div>
-                                    <div class="small text-muted" style="font-size: 0.8rem;">@s.ApiUrl</div>
+                                <div class="server-card-icon">
+                                    <i class="fas fa-server"></i>
+                                </div>
+                                <div style="overflow:hidden;">
+                                    <div class="server-card-name">@s.Name</div>
+                                    <div class="server-card-url">@s.ApiUrl</div>
                                 </div>
                             </div>
-                            <button type="button" class="btn btn-sm text-danger delete-server-btn" 
-                                    style="background: transparent; border: none; font-size: 1rem; padding: 5px 10px; transition: all 0.2s;" 
+                            <button type="button" class="delete-server-btn"
                                     onclick="deleteServerCard(event, @s.Id, '@s.Name')">
                                 <i class="fas fa-trash-alt"></i>
                             </button>
@@ -248,74 +581,69 @@
                 }
                 else
                 {
-                    <div class="text-muted py-4 text-center" style="font-size: 0.9rem;">
-                        <i class="fas fa-info-circle mb-2 d-block" style="font-size: 1.5rem; color: var(--neon-pink);"></i>
+                    <div class="empty-state">
+                        <i class="fas fa-server"></i>
                         No hay servidores registrados aún.
                     </div>
                 }
             </div>
 
-            <!-- Button to register new server -->
-            <button type="button" class="btn btn-block mb-3" id="btn-show-add-server" 
-                    style="background: rgba(0, 240, 255, 0.05); border: 1px dashed var(--neon-cyan); color: var(--neon-cyan); height: 48px; border-radius: 8px; font-weight: bold; font-family: var(--font-future); text-transform: uppercase; font-size: 0.9rem; transition: all 0.3s;"
-                    onclick="showNewServerForm()">
-                <i class="fas fa-plus mr-2"></i> Registrar Servidor
+            <!-- Add server button -->
+            <button type="button" class="btn-add-server" id="btn-show-add-server" onclick="showNewServerForm()">
+                <i class="fas fa-plus"></i> Registrar Servidor
             </button>
         </div>
 
         <!-- PANEL 1.5: Register New Server Form -->
         <div id="panel-new-server" class="d-none text-left">
-            <h2 class="mb-4 text-center" style="color: var(--text-secondary); font-size: 0.95rem; font-family: var(--font-future); letter-spacing: 1px; text-transform: uppercase;">Nuevo Servidor</h2>
-            
-            <div class="form-group mb-3">
-                <label style="color: var(--text-secondary); font-size: 0.85rem;">Nombre del Servidor / Mina</label>
+            <p class="panel-heading">Nuevo Servidor</p>
+
+            <div class="form-group">
+                <label class="form-label-cyber">Nombre del Servidor / Mina</label>
                 <div class="input-group">
                     <div class="input-group-prepend">
                         <span class="input-group-text"><i class="fas fa-tag"></i></span>
                     </div>
-                    <input type="text" class="form-control" id="newServerName" placeholder="Ej. Mina Alpha" style="border-radius: 0 8px 8px 0 !important;">
+                    <input type="text" class="form-control" id="newServerName" placeholder="Ej. Mina Alpha">
                 </div>
             </div>
-            
-            <div class="form-group mb-4">
-                <label style="color: var(--text-secondary); font-size: 0.85rem;">IP / FQDN (API URL)</label>
+
+            <div class="form-group" style="margin-bottom:20px;">
+                <label class="form-label-cyber">IP / FQDN (API URL)</label>
                 <div class="input-group">
                     <div class="input-group-prepend">
                         <span class="input-group-text"><i class="fas fa-globe"></i></span>
                     </div>
-                    <input type="text" class="form-control" id="newServerUrl" placeholder="Ej. 192.168.1.100 o api.mina.com" style="border-radius: 0 8px 8px 0 !important;">
+                    <input type="text" class="form-control" id="newServerUrl" placeholder="Ej. 192.168.1.100">
                 </div>
             </div>
 
             <div class="row g-2">
                 <div class="col-6">
-                    <button type="button" class="btn btn-block" onclick="cancelNewServer()"
-                            style="background: rgba(255, 0, 85, 0.05); border: 1px solid var(--neon-pink); color: var(--neon-pink); height: 45px; border-radius: 8px; font-weight: bold; font-family: var(--font-future); font-size: 0.85rem;">
-                        Cancelar
-                    </button>
+                    <button type="button" class="btn-cancel-dark" onclick="cancelNewServer()">Cancelar</button>
                 </div>
                 <div class="col-6">
-                    <button type="button" class="btn btn-block neon-btn-submit" onclick="submitNewServer()"
-                            style="height: 45px; line-height: 30px; font-size: 0.85rem;">
-                        Siguiente
-                    </button>
+                    <button type="button" class="neon-btn-submit" onclick="submitNewServer()" style="font-size:0.82rem;letter-spacing:1px;">Siguiente</button>
                 </div>
             </div>
         </div>
 
         <!-- PANEL 2: Credentials Login -->
         <div id="panel-credentials" class="d-none text-left">
-            <div class="d-flex align-items-center mb-3">
-                <button type="button" class="btn text-info p-0 mr-3" onclick="backToServers()" style="font-size: 1.2rem; background: transparent; border: none;">
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <button type="button" class="btn-back" onclick="backToServers()">
                     <i class="fas fa-arrow-left"></i>
                 </button>
-                <h2 class="mb-0" style="color: var(--text-secondary); font-size: 0.95rem; font-family: var(--font-future); letter-spacing: 1px; text-transform: uppercase;">Iniciar Sesión</h2>
+                <p class="panel-heading mb-0" style="margin-left:8px;">Iniciar Sesión</p>
             </div>
 
-            <div class="selected-server-banner p-3 mb-4" style="background: rgba(0, 240, 255, 0.05); border: 1px solid rgba(0, 240, 255, 0.15); border-radius: 8px;">
-                <span class="text-secondary small d-block">Conectando a:</span>
-                <span id="selected-server-display-name" style="font-weight: bold; color: #fff;">-</span>
-                <span id="selected-server-display-url" class="text-muted d-block small mt-1">-</span>
+            <div class="selected-server-banner">
+                <div class="banner-icon"><i class="fas fa-server"></i></div>
+                <div>
+                    <div class="banner-label">Conectando a</div>
+                    <div class="banner-name" id="selected-server-display-name">-</div>
+                    <div class="banner-url" id="selected-server-display-url">-</div>
+                </div>
             </div>
 
             <form method="post" asp-controller="Authentication" asp-action="Login" id="loginForm">
@@ -323,19 +651,19 @@
                 <input type="hidden" id="serverName" name="serverName">
 
                 <!-- Username -->
-                <div class="form-group mb-4">
-                    <label style="color: var(--text-secondary); font-size: 0.85rem;">Usuario de SmartFlow</label>
+                <div class="form-group">
+                    <label class="form-label-cyber">Usuario de SmartFlow</label>
                     <div class="input-group">
                         <div class="input-group-prepend">
                             <span class="input-group-text"><i class="fas fa-user"></i></span>
                         </div>
-                        <input type="text" class="form-control" id="username" name="username" placeholder="Usuario" required style="border-radius: 0 8px 8px 0 !important;">
+                        <input type="text" class="form-control" id="username" name="username" placeholder="Usuario" required>
                     </div>
                 </div>
 
                 <!-- Password -->
-                <div class="form-group mb-4">
-                    <label style="color: var(--text-secondary); font-size: 0.85rem;">Contraseña</label>
+                <div class="form-group" style="margin-bottom:20px;">
+                    <label class="form-label-cyber">Contraseña</label>
                     <div class="input-group">
                         <div class="input-group-prepend">
                             <span class="input-group-text"><i class="fas fa-lock"></i></span>
@@ -350,15 +678,16 @@
                 </div>
 
                 <!-- Submit -->
-                <button type="submit" class="btn btn-block neon-btn-submit">Iniciar Sesión</button>
+                <button type="submit" class="neon-btn-submit">Iniciar Sesión</button>
             </form>
         </div>
 
         <!-- Error Messages -->
         @if (TempData["ErrorMessage"] != null)
         {
-            <div class="alert alert-cyber">
-                <i class="fas fa-exclamation-triangle mr-2"></i> @TempData["ErrorMessage"]
+            <div class="alert-cyber">
+                <i class="fas fa-exclamation-triangle"></i>
+                @TempData["ErrorMessage"]
             </div>
         }
 

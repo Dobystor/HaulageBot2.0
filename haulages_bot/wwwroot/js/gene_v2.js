@@ -905,10 +905,10 @@ $(document).ready(function () {
             haulageLimit = selectedLimit;
             
             // Actualizar estilo visual de los botones
-            $('#haulageLimitSelector button').removeClass('text-[#39ff14] bg-[#39ff14]/10 border border-[#39ff14]/20')
+            $('#haulageLimitSelector button').removeClass('text-[#39ff14] bg-[#39ff14]/12')
                                              .addClass('text-slate-400');
             $(this).removeClass('text-slate-400')
-                   .addClass('text-[#39ff14] bg-[#39ff14]/10 border border-[#39ff14]/20');
+                   .addClass('text-[#39ff14] bg-[#39ff14]/12');
             
             // Recargar datos
             if (activeServerId) {

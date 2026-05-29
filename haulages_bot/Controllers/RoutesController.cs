@@ -40,6 +40,7 @@ namespace haulages_bot.Controllers
                     r.selectedMaterialType,
                     r.isExtraction,
                     r.materialTypeId,
+                    r.isEnabled,
                     materialType = r.materialType ?? 
                         (r.materialTypeId.HasValue && materials.TryGetValue(r.materialTypeId.Value, out var name) ? name : null)
                 }).ToList();

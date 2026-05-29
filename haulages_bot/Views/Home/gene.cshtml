@@ -17,9 +17,79 @@
 
     .font-cyber-title { font-family: 'Inter', sans-serif; }
 
-    /* Checkbox active label */
+    /* Beautiful, compact checkbox lists */
+    .checkbox-item {
+        display: flex;
+        align-items: flex-start !important;
+        gap: 6px !important;
+        padding: 4px 6px !important;
+        border-radius: 5px !important;
+        transition: background 0.15s ease-in-out !important;
+        font-size: 10px !important;
+        font-weight: 500 !important;
+        cursor: pointer !important;
+        background: transparent !important;
+    }
+    .checkbox-item:hover {
+        background: rgba(0, 212, 255, 0.05) !important;
+    }
+    .checkbox-item label {
+        font-size: 10px !important;
+        line-height: 1.35 !important;
+        cursor: pointer !important;
+        margin: 0 !important;
+        flex: 1 !important;
+        word-break: break-word !important;
+        color: var(--text-muted);
+        transition: color 0.15s ease-in-out !important;
+    }
+    .checkbox-item label.fs-small {
+        font-size: 8.2px !important;
+        line-height: 1.25 !important;
+    }
+    .checkbox-item label.fs-medium {
+        font-size: 9.2px !important;
+        line-height: 1.3 !important;
+    }
+    .checkbox-item label.fs-normal {
+        font-size: 10px !important;
+        line-height: 1.35 !important;
+    }
+    .checkbox-item label .item-id {
+        font-size: 8.5px !important;
+        font-family: 'JetBrains Mono', monospace !important;
+        color: var(--text-muted) !important;
+        opacity: 0.7;
+        margin-left: 4px !important;
+    }
     .checkbox-item input[type="checkbox"]:checked + label {
         color: var(--neon-cyan) !important;
+        font-weight: 600 !important;
+    }
+    .checkbox-item input[type="checkbox"] {
+        accent-color: var(--neon-cyan) !important;
+        width: 12px !important;
+        height: 12px !important;
+        margin-top: 2px !important;
+        cursor: pointer !important;
+        flex-shrink: 0 !important;
+    }
+
+    /* Specific alignments to keep checkboxes perfectly aligned */
+    #employeesList .checkbox-item,
+    #vehiclesList .checkbox-item {
+        align-items: center !important;
+    }
+    #employeesList .checkbox-item input[type="checkbox"],
+    #vehiclesList .checkbox-item input[type="checkbox"] {
+        margin-top: 0 !important;
+    }
+
+    #routesList .checkbox-item {
+        align-items: flex-start !important;
+    }
+    #routesList .checkbox-item input[type="checkbox"] {
+        margin-top: 1.5px !important;
     }
 
     /* Route / Material filter buttons */
@@ -237,14 +307,7 @@
         font-weight: 700 !important;
     }
 
-    /* Adjust checkbox list alignment when text wraps */
-    .checkbox-item {
-        display: flex;
-        align-items: flex-start !important;
-    }
-    .checkbox-item input[type="checkbox"] {
-        margin-top: 3px !important;
-    }
+
     /* Configuration section card header color */
     .cyber-card {
         background: var(--bg-2) !important;
@@ -335,8 +398,8 @@
                 <span class="material-symbols-outlined text-[#ff0055] text-5xl mb-3 block" style="text-shadow: 0 0 10px rgba(255, 0, 85, 0.4);">warning</span>
                 <h3 class="font-cyber-title text-lg font-bold text-white mb-2">Sin Servidores Configurados</h3>
                 <p class="text-slate-300 mt-3 mb-6">Para iniciar, agrega un servidor de SmartFlow registrando su dirección IP o FQDN y tus credenciales de inicio de sesión.</p>
-                <button class="px-6 py-2.5 bg-[#00f0ff] text-slate-950 font-cyber-title text-[11px] font-bold rounded-md cyber-glow-primary hover:scale-[0.98] transition-transform" onclick="openAddServerModal()">
-                    <span class="material-symbols-outlined mr-1">dns</span> Agregar Primer Servidor
+                <button class="flex items-center justify-center gap-1 mx-auto px-6 py-2.5 bg-[#00f0ff] text-slate-950 font-cyber-title text-[11px] font-bold rounded-md cyber-glow-primary hover:scale-[0.98] transition-transform" onclick="openAddServerModal()">
+                    <span class="material-symbols-outlined text-[16px]">dns</span> Agregar Primer Servidor
                 </button>
             </div>
         </div>
@@ -413,14 +476,23 @@
                         </div>
 
                         <!-- Row 2: Search Inputs -->
-                        <div>
-                            <input type="text" class="w-full cyber-input text-[11px] px-3 py-1.5 rounded" placeholder="Filtrar rutas..." id="searchRoutes">
+                        <div class="relative">
+                            <input type="text" class="w-full cyber-input text-[11px] pl-3 pr-7 py-1.5 rounded" placeholder="Filtrar rutas..." id="searchRoutes">
+                            <button type="button" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white d-none transition-colors" id="btnClearSearchRoutes" onclick="clearSearchInput('searchRoutes', 'btnClearSearchRoutes')">
+                                <span class="material-symbols-outlined text-[14px]">close</span>
+                            </button>
                         </div>
-                        <div>
-                            <input type="text" class="w-full cyber-input text-[11px] px-3 py-1.5 rounded" placeholder="Filtrar operadores..." id="searchEmployees">
+                        <div class="relative">
+                            <input type="text" class="w-full cyber-input text-[11px] pl-3 pr-7 py-1.5 rounded" placeholder="Filtrar operadores..." id="searchEmployees">
+                            <button type="button" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white d-none transition-colors" id="btnClearSearchEmployees" onclick="clearSearchInput('searchEmployees', 'btnClearSearchEmployees')">
+                                <span class="material-symbols-outlined text-[14px]">close</span>
+                            </button>
                         </div>
-                        <div>
-                            <input type="text" class="w-full cyber-input text-[11px] px-3 py-1.5 rounded" placeholder="Filtrar vehículos..." id="searchVehicles">
+                        <div class="relative">
+                            <input type="text" class="w-full cyber-input text-[11px] pl-3 pr-7 py-1.5 rounded" placeholder="Filtrar vehículos..." id="searchVehicles">
+                            <button type="button" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white d-none transition-colors" id="btnClearSearchVehicles" onclick="clearSearchInput('searchVehicles', 'btnClearSearchVehicles')">
+                                <span class="material-symbols-outlined text-[14px]">close</span>
+                            </button>
                         </div>
 
                         <!-- Row 3: Material Filters / Spacers -->
@@ -457,7 +529,7 @@
                     </div>
 
                     <div class="mt-8 flex justify-end">
-                        <button type="submit" class="px-8 py-3 bg-purple-600/10 border border-purple-500/20 text-purple-400 hover:bg-purple-600 hover:text-white hover:border-purple-600 font-cyber-title text-[12px] font-bold rounded-md transition-all">
+                        <button type="submit" class="flex items-center gap-2 px-8 py-3 bg-purple-600/10 border border-purple-500/20 text-purple-400 hover:bg-purple-600 hover:text-white hover:border-purple-600 font-cyber-title text-[12px] font-bold rounded-md transition-all">
                             <span class="material-symbols-outlined text-[18px]">save</span>
                             GUARDAR CONFIGURACIÓN
                         </button>
@@ -495,7 +567,7 @@
                     </div>
 
                     <div class="mt-8 flex justify-end">
-                        <button type="submit" class="px-8 py-3 bg-[#ff0055] text-white font-cyber-title text-[12px] font-bold rounded-md cyber-glow-magenta hover:scale-[0.98] transition-all">
+                        <button type="submit" class="flex items-center gap-2 px-8 py-3 bg-[#ff0055] text-white font-cyber-title text-[12px] font-bold rounded-md cyber-glow-magenta hover:scale-[0.98] transition-all">
                             <span class="material-symbols-outlined text-[18px]">play_circle</span>
                             INICIAR GENERACIÓN MASIVA
                         </button>

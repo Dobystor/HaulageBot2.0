@@ -208,6 +208,13 @@ $(document).ready(function () {
         }
     }
 
+    function getFontSizeClass(text) {
+        const len = (text || '').length;
+        if (len > 35) return 'fs-small';
+        if (len > 22) return 'fs-medium';
+        return 'fs-normal';
+    }
+
     // Renderizar lista de checkboxes genérica
     function renderCheckboxList(containerId, data, idField, nameField, selectedList) {
         const container = $(`#${containerId}`);
@@ -223,11 +230,12 @@ $(document).ready(function () {
             const itemId = item[idField];
             const itemName = String(item[nameField] || '');
             const isChecked = selectedList.includes(itemId) ? 'checked' : '';
+            const sizeClass = getFontSizeClass(itemName);
 
             const itemHtml = `
                 <div class="checkbox-item" data-name="${itemName.toLowerCase()}">
                     <input type="checkbox" id="chk-${containerId}-${itemId}" value="${itemId}" ${isChecked}>
-                    <label for="chk-${containerId}-${itemId}">${itemName} <span class="text-secondary">(${itemId})</span></label>
+                    <label for="chk-${containerId}-${itemId}" class="${sizeClass}">${itemName} <span class="item-id">#${itemId}</span></label>
                 </div>
             `;
             container.append(itemHtml);
@@ -249,7 +257,8 @@ $(document).ready(function () {
 
     // Renderizar lista de rutas con badge de tipo de material (una sola vez)
     function renderRoutesList(routes, selectedList) {
-        _allRoutes = routes || [];
+        // Solo mostrar rutas activas/habilitadas
+        _allRoutes = (routes || []).filter(r => r.isEnabled !== false);
         _activeMatFilter = 'all';
         // Resetear botones de filtro al cargar
         $('#routeMaterialFilter .route-mat-btn').removeClass('active');
@@ -270,11 +279,15 @@ $(document).ready(function () {
             const badge = getRouteBadge(route);
             const isChecked = selectedList.includes(routeId) ? 'checked' : '';
             const matCat = getRouteMatCategory(route);
+            const sizeClass = getFontSizeClass(routeName);
 
             const itemHtml = `
                 <div class="checkbox-item" data-name="${routeName.toLowerCase()}" data-mat="${matCat}">
                     <input type="checkbox" id="chk-routesList-${routeId}" value="${routeId}" ${isChecked}>
-                    <label for="chk-routesList-${routeId}">${routeName} <span class="text-secondary">(${routeId})</span>${badge}</label>
+                    <label for="chk-routesList-${routeId}" class="${sizeClass}" style="display: block;">
+                        <span style="display: block;">${routeName} <span class="item-id">#${routeId}</span></span>
+                        <span style="display: block; margin-top: 2px;">${badge}</span>
+                    </label>
                 </div>
             `;
             container.append(itemHtml);
@@ -294,9 +307,9 @@ $(document).ready(function () {
     function getRouteBadge(route) {
         const mat = route.selectedMaterialType || 0;
         const matName = (route.materialType || 'ESTÉRIL').toUpperCase();
-        if (mat === 0) return '<span style="font-size:9px;padding:1px 5px;border-radius:4px;background:rgba(255,215,0,0.15);color:#ffd700;border:1px solid rgba(255,215,0,0.3);font-weight:700;margin-left:4px;vertical-align:middle;">MINERAL</span>';
-        if (mat === 1) return `<span style="font-size:9px;padding:1px 5px;border-radius:4px;background:rgba(255,100,50,0.15);color:#ff6432;border:1px solid rgba(255,100,50,0.3);font-weight:700;margin-left:4px;vertical-align:middle;">ESTÉRIL: ${matName}</span>`;
-        if (mat === 2) return `<span style="font-size:9px;padding:1px 5px;border-radius:4px;background:rgba(0,200,180,0.15);color:#00c8b4;border:1px solid rgba(0,200,180,0.3);font-weight:700;margin-left:4px;vertical-align:middle;">AMBOS (MINERAL / ${matName})</span>`;
+        if (mat === 0) return '<span style="font-size:8px;padding:0.5px 3.5px;border-radius:3px;background:rgba(255,215,0,0.12);color:#ffd700;border:1px solid rgba(255,215,0,0.25);font-weight:700;margin-left:4px;vertical-align:middle;display:inline-block;white-space:nowrap;">MINERAL</span>';
+        if (mat === 1) return `<span style="font-size:8px;padding:0.5px 3.5px;border-radius:3px;background:rgba(255,100,50,0.12);color:#ff6432;border:1px solid rgba(255,100,50,0.25);font-weight:700;margin-left:4px;vertical-align:middle;display:inline-block;white-space:nowrap;">ESTÉRIL: ${matName}</span>`;
+        if (mat === 2) return `<span style="font-size:8px;padding:0.5px 3.5px;border-radius:3px;background:rgba(0,200,180,0.12);color:#00c8b4;border:1px solid rgba(0,200,180,0.25);font-weight:700;margin-left:4px;vertical-align:middle;display:inline-block;white-space:nowrap;">AMBOS (MINERAL / ${matName})</span>`;
         return '';
     }
 
@@ -345,16 +358,24 @@ $(document).ready(function () {
         applyRoutesFilter();
     };
 
-    // Buscador interactivo para los catálogos
-    $('#searchRoutes').on('input', function () {
-        applyRoutesFilter();
-    });
-    setupSearchFilter('searchEmployees', 'employeesList');
-    setupSearchFilter('searchVehicles', 'vehiclesList');
+    // Helper to clear a search input and trigger filter
+    window.clearSearchInput = function(inputId, clearBtnId) {
+        $(`#${inputId}`).val('').trigger('input');
+        $(`#${clearBtnId}`).addClass('d-none');
+    };
 
-    function setupSearchFilter(searchInputId, listContainerId) {
-        $(`#${searchInputId}`).on('input', function () {
+    // Toggle clear button visibility and run search
+    function setupSearchFilterWithClear(inputId, listContainerId, clearBtnId) {
+        $(`#${inputId}`).on('input', function () {
             const query = ($(this).val() || '').toLowerCase().trim();
+            
+            // Show/hide clear button
+            if (query.length > 0) {
+                $(`#${clearBtnId}`).removeClass('d-none');
+            } else {
+                $(`#${clearBtnId}`).addClass('d-none');
+            }
+
             $(`#${listContainerId} .checkbox-item`).each(function () {
                 const name = String($(this).attr('data-name') || '').toLowerCase();
                 if (name.indexOf(query) > -1) {
@@ -365,6 +386,20 @@ $(document).ready(function () {
             });
         });
     }
+
+    // Buscador interactivo para los catálogos
+    $('#searchRoutes').on('input', function () {
+        const query = ($(this).val() || '').toLowerCase().trim();
+        if (query.length > 0) {
+            $('#btnClearSearchRoutes').removeClass('d-none');
+        } else {
+            $('#btnClearSearchRoutes').addClass('d-none');
+        }
+        applyRoutesFilter();
+    });
+
+    setupSearchFilterWithClear('searchEmployees', 'employeesList', 'btnClearSearchEmployees');
+    setupSearchFilterWithClear('searchVehicles', 'vehiclesList', 'btnClearSearchVehicles');
 
     // Guardar Configuración del Bot
     $('#botConfigForm').submit(function (e) {

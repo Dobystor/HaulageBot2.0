@@ -204,9 +204,7 @@ namespace haulages_bot.Services
 
                 // Construir y enviar query a RethinkDB via HTTP
                 var doc = BuildDocumentJson(sim);
-                var reqlQuery = $"r.db('SmartFlow').table('HaulageProcess').insert({doc}, {{conflict: 'replace'}})";
-
-                var success = await ExecuteReqlHttp(baseUrl, reqlQuery, config.ServerConfigId, ct);
+                var success = await ExecuteReqlHttp(baseUrl, doc, config.ServerConfigId, ct);
 
                 if (success)
                 {
@@ -279,10 +277,13 @@ namespace haulages_bot.Services
                 }
 
                 var url = $"{baseUrl}/ajax/reql/?conn_id={Uri.EscapeDataString(connId)}";
-                var payload = new { raw_query = query };
-                var json = JsonConvert.SerializeObject(payload);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
 
+                // El protocolo ReQL HTTP usa el AST serializado, no raw_query
+                // query aquí ya viene como el JSON del documento a insertar
+                // Formato: [1,[56,[[15,[[14,["SmartFlow"]],"HaulageProcess"]],{doc}],{"conflict":"replace"}],{"binary_format":"raw","time_format":"raw","profile":false}]
+                var reqlAst = $"[1,[56,[[15,[[14,[\"SmartFlow\"]],\"HaulageProcess\"]],{query},{{\"conflict\":\"replace\"}}],{{\"binary_format\":\"raw\",\"time_format\":\"raw\",\"profile\":false}}]";
+
+                var content = new StringContent(reqlAst, Encoding.UTF8, "application/json");
                 var response = await _httpClient.PostAsync(url, content, ct);
 
                 if (!response.IsSuccessStatusCode)
@@ -290,7 +291,6 @@ namespace haulages_bot.Services
                     var body = await response.Content.ReadAsStringAsync(ct);
                     _logger.LogWarning($"[RethinkBot] HTTP {response.StatusCode}: {body}");
 
-                    // Si el conn_id expiró, limpiar para que se renueve
                     if (response.StatusCode == System.Net.HttpStatusCode.BadRequest && body.Contains("conn_id"))
                     {
                         _connIds.Remove(serverId);

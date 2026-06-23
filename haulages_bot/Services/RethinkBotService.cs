@@ -153,8 +153,10 @@ namespace haulages_bot.Services
             var random = new Random();
 
             // Agregar vehículos si hay espacio
-            while (vehicles.Count < config.MaxSimultaneousVehicles && vehicles.Count < dbVehicles.Count)
+            int attempts = 0;
+            while (vehicles.Count < config.MaxSimultaneousVehicles && vehicles.Count < dbVehicles.Count && attempts < dbVehicles.Count * 2)
             {
+                attempts++;
                 var vehicle = dbVehicles[random.Next(dbVehicles.Count)];
                 if (vehicles.Any(v => v.VehicleId == vehicle.VehicleId)) continue;
 
@@ -171,17 +173,20 @@ namespace haulages_bot.Services
                     EmployeeName = employee.FullName,
                     Route = route,
                     CurrentStatus = STATUS_LOADING,
-                    LastUpdate = DateTime.UtcNow
+                    LastUpdate = DateTime.UtcNow.AddSeconds(-config.IntervalSeconds - 1) // Forzar que avance en el primer ciclo
                 });
             }
 
             // Avanzar estado de cada vehículo
             var baseUrl = $"https://{config.RethinkHost}:{config.RethinkPort}";
+            bool anyAdvanced = false;
 
             foreach (var sim in vehicles.ToList())
             {
                 var elapsed = (DateTime.UtcNow - sim.LastUpdate).TotalSeconds;
                 if (elapsed < config.IntervalSeconds) continue;
+
+                anyAdvanced = true;
 
                 // Avanzar al siguiente estado
                 sim.CurrentStatus = GetNextStatus(sim.CurrentStatus);
@@ -216,6 +221,11 @@ namespace haulages_bot.Services
                     _logHistoryService.AddLog(config.ServerConfigId,
                         $"[RethinkBot] {sim.VehicleEconomicNumber} → {statusName} | {sim.Route.description}");
                 }
+            }
+
+            if (!anyAdvanced && vehicles.Count > 0)
+            {
+                _logger.LogWarning($"[RethinkBot] {vehicles.Count} vehículos en lista pero ninguno avanzó. Intervalo: {config.IntervalSeconds}s");
             }
         }
 

@@ -201,7 +201,7 @@ namespace haulages_bot.Services
                 var doc = BuildDocumentJson(sim);
                 var reqlQuery = $"r.db('SmartFlow').table('HaulageProcess').insert({doc}, {{conflict: 'replace'}})";
 
-                var success = await ExecuteReqlHttp(baseUrl, reqlQuery, ct);
+                var success = await ExecuteReqlHttp(baseUrl, reqlQuery, config.ServerConfigId, ct);
 
                 if (success)
                 {
@@ -219,11 +219,56 @@ namespace haulages_bot.Services
             }
         }
 
-        private async Task<bool> ExecuteReqlHttp(string baseUrl, string query, CancellationToken ct)
+        // Tracking de conexiones HTTP (conn_id por servidor)
+        private readonly Dictionary<int, string> _connIds = new();
+
+        private async Task<string?> GetOrCreateConnId(string baseUrl, int serverId, CancellationToken ct)
+        {
+            if (_connIds.TryGetValue(serverId, out var existingId))
+                return existingId;
+
+            try
+            {
+                var url = $"{baseUrl}/ajax/reql/open-new-connection";
+                var response = await _httpClient.PostAsync(url, null, ct);
+                if (response.IsSuccessStatusCode)
+                {
+                    var body = await response.Content.ReadAsStringAsync(ct);
+                    // Response is typically just the conn_id as a JSON string like "abc123=="
+                    var connId = body.Trim().Trim('"');
+                    if (!string.IsNullOrWhiteSpace(connId))
+                    {
+                        _connIds[serverId] = connId;
+                        _logHistoryService.AddLog(serverId, $"[RethinkBot] Conexión abierta: {connId}");
+                        return connId;
+                    }
+                }
+                else
+                {
+                    var err = await response.Content.ReadAsStringAsync(ct);
+                    _logger.LogWarning($"[RethinkBot] Error abriendo conexión: {response.StatusCode} - {err}");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[RethinkBot] Error al abrir conexión HTTP");
+            }
+
+            return null;
+        }
+
+        private async Task<bool> ExecuteReqlHttp(string baseUrl, string query, int serverId, CancellationToken ct)
         {
             try
             {
-                var url = $"{baseUrl}/ajax/reql/";
+                var connId = await GetOrCreateConnId(baseUrl, serverId, ct);
+                if (connId == null)
+                {
+                    _logHistoryService.AddLog(serverId, "[RethinkBot] No se pudo obtener conn_id", true);
+                    return false;
+                }
+
+                var url = $"{baseUrl}/ajax/reql/?conn_id={Uri.EscapeDataString(connId)}";
                 var payload = new { raw_query = query };
                 var json = JsonConvert.SerializeObject(payload);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
@@ -234,6 +279,12 @@ namespace haulages_bot.Services
                 {
                     var body = await response.Content.ReadAsStringAsync(ct);
                     _logger.LogWarning($"[RethinkBot] HTTP {response.StatusCode}: {body}");
+
+                    // Si el conn_id expiró, limpiar para que se renueve
+                    if (response.StatusCode == System.Net.HttpStatusCode.BadRequest && body.Contains("conn_id"))
+                    {
+                        _connIds.Remove(serverId);
+                    }
                     return false;
                 }
 
@@ -242,6 +293,7 @@ namespace haulages_bot.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "[RethinkBot] Error ejecutando query HTTP");
+                _connIds.Remove(serverId);
                 throw;
             }
         }

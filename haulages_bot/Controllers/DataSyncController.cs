@@ -228,6 +228,11 @@ namespace haulages_bot.Controllers
                 .ToListAsync();
             if (!vehicles.Any()) return BadRequest("No se encontraron los vehículos activos seleccionados en la base de datos.");
 
+            // Pre-cargar empleados para snapshot de nombres
+            var employees = await _dbContext.Employees
+                .Where(e => e.ServerConfigId == request.ServerId && selectedEmployees.Contains(e.EmployeeId))
+                .ToDictionaryAsync(e => e.EmployeeId, e => e);
+
             var random = new Random();
             var weightsAndVehicles = new List<(decimal Weight, Vehicle Vehicle)>();
             decimal remainingTonnage = request.TotalTonnage;
@@ -378,7 +383,10 @@ namespace haulages_bot.Controllers
                                             Comments = "Importación Masiva Rango Fechas",
                                             materialTypeId = resolvedMaterialTypeId,
                                             ServerConfigId = request.ServerId,
-                                            Dateofcarries = dateOfCarry.ToString("yyyy-MM-dd HH:mm:ss")
+                                            Dateofcarries = dateOfCarry.ToString("yyyy-MM-dd HH:mm:ss"),
+                                            VehicleEconomicNumber = item.Vehicle.EconomicNumber,
+                                            EmployeeFullName = employees.TryGetValue(employeeId, out var emp) ? emp.FullName : null,
+                                            RouteDescription = routes.TryGetValue(routeId, out var rt) ? rt.description : null
                                         });
                                     }
                                     else

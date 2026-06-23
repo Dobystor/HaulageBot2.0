@@ -34,6 +34,9 @@ builder.Services.AddSingleton<DataSyncJobService>();
 builder.Services.AddScoped<DataHistoricsService>();
 builder.Services.AddSingleton<LogHistoryService>();
 
+// Bot de RethinkDB (simulación de HaulageProcess)
+builder.Services.AddHostedService<RethinkBotService>();
+
 // Habilitar SignalR para la comunicación en tiempo real.
 builder.Services.AddSignalR();
 
@@ -81,6 +84,40 @@ using (var serviceProvider = builder.Services.BuildServiceProvider())
         {
             Console.WriteLine("Aplicando migraciones...");
             dbContext.Database.Migrate();
+
+            // Agregar columnas de snapshot si no existen (migración manual para SQLite)
+            try
+            {
+                dbContext.Database.ExecuteSqlRaw("ALTER TABLE Haulages ADD COLUMN VehicleEconomicNumber TEXT");
+            } catch { /* ya existe */ }
+            try
+            {
+                dbContext.Database.ExecuteSqlRaw("ALTER TABLE Haulages ADD COLUMN EmployeeFullName TEXT");
+            } catch { /* ya existe */ }
+            try
+            {
+                dbContext.Database.ExecuteSqlRaw("ALTER TABLE Haulages ADD COLUMN RouteDescription TEXT");
+            } catch { /* ya existe */ }
+
+            // Crear tabla RethinkBotConfigs si no existe
+            try
+            {
+                dbContext.Database.ExecuteSqlRaw(@"
+                    CREATE TABLE IF NOT EXISTS RethinkBotConfigs (
+                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        ServerConfigId INTEGER NOT NULL,
+                        RethinkHost TEXT NOT NULL DEFAULT '',
+                        RethinkPort INTEGER NOT NULL DEFAULT 28015,
+                        RethinkPassword TEXT NOT NULL DEFAULT '',
+                        IntervalSeconds INTEGER NOT NULL DEFAULT 30,
+                        MaxSimultaneousVehicles INTEGER NOT NULL DEFAULT 5,
+                        IsEnabled INTEGER NOT NULL DEFAULT 0
+                    )");
+            } catch { /* ya existe */ }
+            try
+            {
+                dbContext.Database.ExecuteSqlRaw("ALTER TABLE RethinkBotConfigs ADD COLUMN RethinkPassword TEXT NOT NULL DEFAULT ''");
+            } catch { /* ya existe */ }
 
             if (!dbContext.DataConfigurationLocal.Any())
             {

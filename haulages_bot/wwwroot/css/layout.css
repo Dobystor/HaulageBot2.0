@@ -5,26 +5,26 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Orbitron:wght@400;700;900&display=swap');
 
 :root {
-    --bg-main:    #050d1a;
-    --card-bg:    #0b1628;
-    --card-border: rgba(100, 160, 255, 0.12);
-    --sidebar-bg: #080f1e;
-    --text-primary: #e8f0ff;
-    --text-secondary: #7a90b8;
+    --bg-main:    #111113;
+    --card-bg:    #18181b;
+    --card-border: rgba(255, 255, 255, 0.08);
+    --sidebar-bg: #18181b;
+    --text-primary: #f0f0f2;
+    --text-secondary: #a1a1aa;
 
-    /* Neon palette */
-    --neon-cyan:   #00d4ff;
-    --neon-blue:   #1e6fff;
-    --neon-purple: #a259ff;
-    --neon-pink:   #ff3c6e;
-    --neon-green:  #00e896;
-    --neon-yellow: #ffe94d;
+    /* Toned-down palette */
+    --neon-cyan:   #6bb8cc;
+    --neon-blue:   #5b8fd9;
+    --neon-purple: #9b7cd4;
+    --neon-pink:   #e05a7a;
+    --neon-green:  #4eba8a;
+    --neon-yellow: #d4b84a;
 
-    /* Glow variants */
-    --glow-cyan:   0 0 12px rgba(0, 212, 255, 0.45);
-    --glow-blue:   0 0 12px rgba(30, 111, 255, 0.45);
-    --glow-green:  0 0 12px rgba(0, 232, 150, 0.45);
-    --glow-pink:   0 0 12px rgba(255, 60, 110, 0.45);
+    /* Subtle glow variants */
+    --glow-cyan:   0 0 8px rgba(107, 184, 204, 0.2);
+    --glow-blue:   0 0 8px rgba(91, 143, 217, 0.2);
+    --glow-green:  0 0 8px rgba(78, 186, 138, 0.2);
+    --glow-pink:   0 0 8px rgba(224, 90, 122, 0.2);
 
     --font-sans: 'Inter', sans-serif;
     --font-future: 'Inter', sans-serif;
@@ -47,16 +47,15 @@ body {
     position: fixed;
     top: 0;
     left: 0;
-    background: linear-gradient(180deg, #08101f 0%, #060d1c 100%);
-    backdrop-filter: blur(20px);
-    border-right: 1px solid rgba(0, 212, 255, 0.1);
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--card-border);
     padding-top: 80px;
     z-index: 100;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     transform: translateX(-100%);
     display: flex;
     flex-direction: column;
-    box-shadow: 4px 0 40px rgba(0, 0, 0, 0.6);
+    box-shadow: 2px 0 20px rgba(0, 0, 0, 0.3);
 }
 
 .sidebar::before {
@@ -65,9 +64,9 @@ body {
     top: 0;
     left: 0;
     right: 0;
-    height: 2px;
+    height: 1px;
     background: linear-gradient(90deg, var(--neon-blue), var(--neon-cyan), var(--neon-purple));
-    opacity: 0.6;
+    opacity: 0.3;
 }
 
 .sidebar.active { transform: translateX(0); }
@@ -87,8 +86,8 @@ body {
 }
 
 .sidebar a:hover {
-    background: rgba(0, 212, 255, 0.06);
-    color: var(--neon-cyan);
+    background: rgba(255, 255, 255, 0.04);
+    color: #ffffff;
     border-left-color: var(--neon-cyan);
     padding-left: 28px;
 }
@@ -123,11 +122,11 @@ body {
     left: 0;
     width: 100%;
     height: 70px;
-    background: rgba(5, 13, 26, 0.92) !important;
-    backdrop-filter: blur(20px);
-    border-bottom: 1px solid rgba(0, 212, 255, 0.1) !important;
+    background: rgba(17, 17, 19, 0.95) !important;
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--card-border) !important;
     z-index: 1030;
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(0, 212, 255, 0.08);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
 }
 
 .navbar-brand img { height: 38px; }
@@ -140,10 +139,9 @@ body {
 }
 
 .btn-dark:hover {
-    background: rgba(0, 212, 255, 0.08);
+    background: rgba(255, 255, 255, 0.06);
     border-color: var(--neon-cyan);
     color: var(--neon-cyan);
-    box-shadow: var(--glow-cyan);
 }
 
 /* ============================================================
@@ -153,7 +151,7 @@ body {
     position: fixed;
     top: 0; left: 0;
     width: 100%; height: 100%;
-    background-color: rgba(3, 8, 20, 0.95);
+    background-color: rgba(17, 17, 19, 0.95);
     backdrop-filter: blur(12px);
     z-index: 1050;
     display: flex;
@@ -176,7 +174,6 @@ body {
     height: 100%;
     background: linear-gradient(90deg, var(--neon-blue), var(--neon-cyan));
     animation: loadProgress 2s ease infinite;
-    box-shadow: 0 0 8px var(--neon-cyan);
 }
 
 @keyframes loadProgress {
@@ -189,9 +186,8 @@ body {
    FOOTER
    ============================================================ */
 .footer {
-    background: rgba(5, 13, 26, 0.9) !important;
-    backdrop-filter: blur(16px);
-    border-top: 1px solid rgba(0, 212, 255, 0.08) !important;
+    background: var(--bg-main) !important;
+    border-top: 1px solid var(--card-border) !important;
     color: var(--text-secondary) !important;
     text-align: center;
     padding: 20px 0;
@@ -207,35 +203,33 @@ body {
     border-radius: 50%;
     width: 38px; height: 38px;
     display: flex; align-items: center; justify-content: center;
-    background: rgba(0, 212, 255, 0.05);
-    border: 1px solid rgba(0, 212, 255, 0.15);
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--card-border);
     color: #fff;
     transition: all 0.3s;
 }
 
 #notificationBell:hover {
-    border-color: var(--neon-cyan);
+    border-color: rgba(255, 255, 255, 0.2);
     color: var(--neon-cyan);
-    box-shadow: var(--glow-cyan);
 }
 
 .notification-popup {
     position: fixed !important;
     top: 80px; right: 20px;
     width: 360px;
-    background: rgba(8, 14, 30, 0.97) !important;
-    backdrop-filter: blur(30px);
-    border: 1px solid rgba(0, 212, 255, 0.15) !important;
+    background: var(--card-bg) !important;
+    border: 1px solid var(--card-border) !important;
     border-radius: 16px;
     z-index: 1050;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), var(--glow-cyan);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
     color: #fff;
     overflow: hidden;
 }
 
 .notification-popup .card-header {
-    background: rgba(0, 0, 0, 0.4) !important;
-    border-bottom: 1px solid rgba(0, 212, 255, 0.1) !important;
+    background: rgba(0, 0, 0, 0.3) !important;
+    border-bottom: 1px solid var(--card-border) !important;
     padding: 15px 20px;
     font-family: var(--font-future);
     font-size: 0.9rem;
@@ -259,8 +253,8 @@ body {
 
 /* Clock / Timer containers */
 .clock-container, .timer-container, .countdown-container {
-    background: rgba(0, 212, 255, 0.04) !important;
-    border: 1px solid rgba(0, 212, 255, 0.1);
+    background: rgba(255, 255, 255, 0.02) !important;
+    border: 1px solid var(--card-border);
     border-radius: 10px;
     padding: 12px; margin-bottom: 12px;
     text-align: center;
@@ -276,16 +270,16 @@ body {
 
 #currentDateTime, #nextRunTimeFixed, #nextRunTimer {
     font-size: 0.9rem; font-weight: 600;
-    background: rgba(0, 212, 255, 0.06);
-    border: 1px solid rgba(0, 212, 255, 0.2);
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--card-border);
     color: var(--neon-cyan);
     padding: 6px 12px; border-radius: 8px;
     width: fit-content; margin: 0 auto;
 }
 
 #nextRunTimer {
-    background: rgba(162, 89, 255, 0.08);
-    border-color: rgba(162, 89, 255, 0.2);
+    background: rgba(155, 124, 212, 0.06);
+    border-color: rgba(155, 124, 212, 0.15);
     color: var(--neon-purple);
 }
 
@@ -293,10 +287,9 @@ body {
    BOOTSTRAP ALERT OVERRIDES (SignalR Toasts)
    ============================================================ */
 .alert {
-    background: rgba(5, 13, 26, 0.9) !important;
-    backdrop-filter: blur(16px);
+    background: var(--card-bg) !important;
     border-radius: 12px !important;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6) !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
     color: #fff !important;
     border-width: 1px !important;
     border-style: solid !important;
@@ -307,13 +300,11 @@ body {
 .alert-success {
     border-color: var(--neon-green) !important;
     border-left: 4px solid var(--neon-green) !important;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), var(--glow-green) !important;
 }
 
 .alert-danger {
     border-color: var(--neon-pink) !important;
     border-left: 4px solid var(--neon-pink) !important;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), var(--glow-pink) !important;
 }
 
 /* ============================================================

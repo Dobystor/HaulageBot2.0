@@ -56,6 +56,11 @@ namespace haulages_bot.Models
         // Tipo de material transportado
         public string? MaterialType { get; set; }
 
+        // Snapshots de nombres al momento de registro (para que el histórico sea inmutable)
+        public string? VehicleEconomicNumber { get; set; }
+        public string? EmployeeFullName { get; set; }
+        public string? RouteDescription { get; set; }
+
         public int ServerConfigId { get; set; }
 
         // Propiedad de navegación que representa la relación con la entidad Vehicle

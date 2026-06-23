@@ -26,11 +26,11 @@
     <div class="flex justify-between items-center mb-8">
         <div>
             <h2 class="font-cyber-title text-2xl font-bold tracking-tight text-white">
-                <span class="material-symbols-outlined text-[#36b0c9] mr-2 text-3xl">dns</span> GESTIÓN DE SERVIDORES
+                <span class="material-symbols-outlined text-[#6bb8cc] mr-2 text-3xl">dns</span> GESTIÓN DE SERVIDORES
             </h2>
-            <p class="text-slate-300 text-sm mt-1 font-medium">Agrega, edita y configura los servidores de SmartFlow vinculados a este bot.</p>
+            <p class="text-slate-400 text-sm mt-1 font-medium">Agrega, edita y configura los servidores de SmartFlow vinculados a este bot.</p>
         </div>
-        <button class="flex items-center gap-1 px-6 py-2.5 bg-[#0a5da7] text-white font-cyber-title text-[11px] font-bold rounded-md hover:scale-[0.98] transition-transform" onclick="openServerModal()">
+        <button class="flex items-center gap-1 px-6 py-2.5 bg-[#5b8fd9] text-white font-cyber-title text-[11px] font-bold rounded-md hover:scale-[0.98] transition-transform" onclick="openServerModal()">
             <span class="material-symbols-outlined text-[16px]">add</span> NUEVO SERVIDOR
         </button>
     </div>
@@ -48,7 +48,7 @@
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title font-cyber-title font-bold text-[#36b0c9]" id="serverModalLabel"><span class="material-symbols-outlined mr-1">settings</span> Configurar Servidor</h5>
+                <h5 class="modal-title font-cyber-title font-bold text-[#6bb8cc]" id="serverModalLabel"><span class="material-symbols-outlined mr-1">settings</span> Configurar Servidor</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body space-y-4">
@@ -99,7 +99,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="px-4 py-2 bg-slate-950/40 border border-slate-800 text-slate-400 font-cyber-title font-bold text-[11px] rounded hover:bg-slate-900/60 hover:text-slate-200 hover:border-slate-700 transition-all" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="px-6 py-2 bg-[#0a5da7] text-white font-cyber-title font-bold text-[11px] rounded" id="btnSaveServer" onclick="saveServer()">Guardar Cambios</button>
+                <button type="button" class="px-6 py-2 bg-[#5b8fd9] text-white font-cyber-title font-bold text-[11px] rounded" id="btnSaveServer" onclick="saveServer()">Guardar Cambios</button>
             </div>
         </div>
     </div>
@@ -136,13 +136,13 @@
                 data.forEach(function(server) {
                     const isWorking = (server.id == activeId);
                     const workingBadge = isWorking ? 
-                        `<span class="px-2.5 py-0.5 bg-[#36b0c9]/15 text-[#36b0c9] border border-[#36b0c9]/30 font-bold rounded text-[10px] tracking-wider font-cyber-title uppercase">SELECCIONADO</span>` : '';
+                        `<span class="px-2.5 py-0.5 bg-[#6bb8cc]/10 text-[#6bb8cc] border border-[#6bb8cc]/25 font-bold rounded text-[10px] tracking-wider font-cyber-title uppercase">SELECCIONADO</span>` : '';
                     
-                    const statusClass = server.isActive ? 'bg-[#22c55e]' : 'bg-slate-500';
+                    const statusClass = server.isActive ? 'bg-[#4eba8a]' : 'bg-slate-500';
                     const statusText = server.isActive ? 'Activo' : 'Inactivo';
 
                     const card = `
-                        <div class="cyber-card rounded-lg p-6 flex flex-col justify-between ${isWorking ? 'border-[#0a5da7] bg-[#002b49]' : 'border-white/5 bg-[#002237]'}" style="border-width: 1px;">
+                        <div class="cyber-card rounded-lg p-6 flex flex-col justify-between ${isWorking ? 'border-[#5b8fd9] bg-[#1a1a2e]' : 'border-white/5 bg-[#18181b]'}" style="border-width: 1px;">
                             <div>
                                 <div class="flex items-center justify-between mb-4">
                                     <div class="flex items-center gap-2">
@@ -151,22 +151,32 @@
                                     </div>
                                     ${workingBadge}
                                 </div>
-                                <div class="p-4 bg-black/40 border border-white/5 rounded-lg mb-6 font-mono text-[12px] break-all text-white">
+                                <div class="p-4 bg-black/30 border border-white/5 rounded-lg mb-4 font-mono text-[12px] break-all text-white">
                                     <span class="text-slate-400 block text-[9px] font-cyber-title font-bold tracking-widest mb-1 uppercase opacity-75">URL DE API</span>
                                     <span class="font-medium">${server.apiUrl}</span>
+                                </div>
+                                <!-- Tonelaje Estimado Diario -->
+                                <div class="p-3 bg-black/20 border border-white/5 rounded-lg mb-6" id="tonnage-card-${server.id}">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="material-symbols-outlined text-[16px] text-[#d4b84a]">scale</span>
+                                        <span class="text-[9px] font-cyber-title font-bold tracking-widest text-slate-400 uppercase">TONELAJE ESTIMADO (24H)</span>
+                                    </div>
+                                    <span class="font-mono text-[18px] font-bold text-[#d4b84a]" id="tonnage-value-${server.id}">--</span>
+                                    <span class="text-[11px] text-slate-400 ml-1">toneladas</span>
+                                    <p class="text-[10px] text-slate-500 mt-1 font-mono" id="tonnage-detail-${server.id}">Calculando...</p>
                                 </div>
                             </div>
                             
                             <div class="space-y-3">
                                 <div class="flex gap-2">
-                                    <button class="flex-1 py-2 bg-slate-950/40 border border-slate-800 text-slate-400 text-[11px] font-cyber-title font-bold uppercase flex items-center justify-center gap-1 hover:bg-slate-900/60 hover:text-slate-200 hover:border-slate-700 rounded-md transition-all" onclick='editServer(${JSON.stringify(server)})'>
+                                    <button class="flex-1 py-2 bg-white/3 border border-white/8 text-slate-400 text-[11px] font-cyber-title font-bold uppercase flex items-center justify-center gap-1 hover:bg-white/5 hover:text-white hover:border-white/15 rounded-md transition-all" onclick='editServer(${JSON.stringify(server)})'>
                                         <span class="material-symbols-outlined text-[14px]">edit</span> Editar
                                     </button>
-                                    <button class="py-2 px-3 bg-red-950/10 border border-red-900/30 text-red-400 hover:bg-red-500/10 hover:border-red-500 transition-all flex items-center justify-center rounded-md" onclick="deleteServer(${server.id})">
+                                    <button class="py-2 px-3 bg-[#e05a7a]/5 border border-[#e05a7a]/20 text-[#e05a7a] hover:bg-[#e05a7a]/10 hover:border-[#e05a7a]/40 transition-all flex items-center justify-center rounded-md" onclick="deleteServer(${server.id})">
                                         <span class="material-symbols-outlined text-[16px]">delete</span>
                                     </button>
                                 </div>
-                                <button class="w-full py-2.5 ${isWorking ? 'bg-[#0a5da7]/10 text-[#0a5da7]/70 border border-[#0a5da7]/20 cursor-default' : 'bg-[#0a5da7] text-white hover:scale-[0.98] transition-transform font-bold'} text-[11px] font-cyber-title font-bold uppercase flex items-center justify-center gap-2 rounded-md" ${isWorking ? 'disabled' : `onclick="selectServer(${server.id}, '${server.name}')"`}>
+                                <button class="w-full py-2.5 ${isWorking ? 'bg-[#5b8fd9]/10 text-[#5b8fd9]/70 border border-[#5b8fd9]/20 cursor-default' : 'bg-[#5b8fd9] text-white hover:scale-[0.98] transition-transform font-bold'} text-[11px] font-cyber-title font-bold uppercase flex items-center justify-center gap-2 rounded-md" ${isWorking ? 'disabled' : `onclick="selectServer(${server.id}, '${server.name}')"`}>
                                     <span class="material-symbols-outlined text-[16px]">${isWorking ? 'check_circle' : 'import_contacts'}</span>
                                     ${isWorking ? 'TRABAJANDO AQUÍ' : 'TRABAJAR EN ESTE SERVIDOR'}
                                 </button>
@@ -174,6 +184,11 @@
                         </div>
                     `;
                     $('#serversList').append(card);
+                });
+
+                // Cargar estimados de tonelaje para cada servidor
+                data.forEach(function(server) {
+                    loadServerTonnageEstimate(server.id);
                 });
             });
         }
@@ -318,6 +333,24 @@
             }
 
             alert('Servidor seleccionado: ' + name + '\nLos catálogos y configuraciones ahora se sincronizarán con este servidor.');
+        }
+
+        function loadServerTonnageEstimate(serverId) {
+            $.getJSON(`/api/ConfBoot/estimatedDailyTonnage?serverId=${serverId}`, function(data) {
+                const valueEl = $(`#tonnage-value-${serverId}`);
+                const detailEl = $(`#tonnage-detail-${serverId}`);
+                
+                if (data.estimatedTonnage > 0) {
+                    valueEl.text(data.estimatedTonnage.toLocaleString('es-MX'));
+                    detailEl.text(data.detail);
+                } else {
+                    valueEl.text('--');
+                    detailEl.text(data.detail || 'Configura el bot para ver estimación');
+                }
+            }).fail(function() {
+                $(`#tonnage-value-${serverId}`).text('--');
+                $(`#tonnage-detail-${serverId}`).text('Error al calcular');
+            });
         }
     </script>
 }

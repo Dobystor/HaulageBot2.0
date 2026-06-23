@@ -303,7 +303,10 @@ namespace haulages_bot.Controllers
                                 Comments = "Importado desde Excel",
                                 materialTypeId = resolvedMaterialTypeId,
                                 ServerConfigId = serverId,
-                                Dateofcarries = dateOfCarries.ToString("yyyy-MM-dd HH:mm:ss")
+                                Dateofcarries = dateOfCarries.ToString("yyyy-MM-dd HH:mm:ss"),
+                                VehicleEconomicNumber = vehicle.EconomicNumber,
+                                EmployeeFullName = employee.FullName,
+                                RouteDescription = route.description
                             });
                             
                             lock (lockObj)
@@ -516,7 +519,10 @@ namespace haulages_bot.Controllers
                                 Comments = "Importado corregido desde UI",
                                 materialTypeId = resolvedMaterialTypeId,
                                 ServerConfigId = serverId,
-                                Dateofcarries = dateOfCarries.ToString("yyyy-MM-dd HH:mm:ss")
+                                Dateofcarries = dateOfCarries.ToString("yyyy-MM-dd HH:mm:ss"),
+                                VehicleEconomicNumber = vehicle.EconomicNumber,
+                                EmployeeFullName = employee.FullName,
+                                RouteDescription = route.description
                             });
                             
                             lock (lockObj)

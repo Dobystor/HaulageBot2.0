@@ -325,7 +325,10 @@ public class DataSyncJobService : IHostedService, IDisposable
                 Comments = acarreo.Comments,
                 materialTypeId = acarreo.materialTypeId,
                 ServerConfigId = server.Id,
-                Dateofcarries = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+                Dateofcarries = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                VehicleEconomicNumber = vehicleDetail.EconomicNumber,
+                EmployeeFullName = employeeDetail.FullName,
+                RouteDescription = routeDetail.description
             });
 
             await context.SaveChangesAsync();

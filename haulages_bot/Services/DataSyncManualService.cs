@@ -158,18 +158,6 @@ namespace haulages_bot.Services
                     // Limpieza de entidades obsoletas antes de guardar las nuevas
                     if (typeof(T) == typeof(haulages_bot.Models.Route))
                     {
-                        var haulagesToNullify = await dbContext.Haulages
-                            .Where(h => h.ServerConfigId == serverId && h.PathId != null && !incomingIds.Contains(h.PathId.Value))
-                            .ToListAsync();
-                        foreach (var h in haulagesToNullify)
-                        {
-                            h.PathId = null;
-                        }
-                        if (haulagesToNullify.Any())
-                        {
-                            await dbContext.SaveChangesAsync();
-                        }
-
                         var routesToDelete = await dbContext.Routes
                             .Where(r => r.ServerConfigId == serverId && !incomingIds.Contains(r.haulagePathId))
                             .ToListAsync();
@@ -339,18 +327,6 @@ namespace haulages_bot.Services
                     // Limpieza de empleados obsoletos (desvinculando históricos si existen)
                     var incomingIds = filteredEmployees.Select(e => e.EmployeeId).ToList();
 
-                    var haulagesToNullify = await dbContext.Haulages
-                        .Where(h => h.ServerConfigId == server.Id && h.EmployeeId != null && !incomingIds.Contains(h.EmployeeId.Value))
-                        .ToListAsync();
-                    foreach (var h in haulagesToNullify)
-                    {
-                        h.EmployeeId = null;
-                    }
-                    if (haulagesToNullify.Count > 0)
-                    {
-                        await dbContext.SaveChangesAsync();
-                    }
-
                     var programmingRecordsToDelete = await dbContext.ProgrammingRecords
                         .Where(pr => pr.ServerConfigId == server.Id && !incomingIds.Contains(pr.EmployeeId))
                         .ToListAsync();
@@ -454,20 +430,8 @@ namespace haulages_bot.Services
             {
                 try
                 {
-                    // Limpieza de vehículos obsoletos (desvinculando históricos si existen)
+                    // Limpieza de vehículos obsoletos
                     var incomingVehicleIds = vehicles.Select(v => v.VehicleId).ToList();
-
-                    var vehicleHaulagesToNullify = await dbContext.Haulages
-                        .Where(h => h.ServerConfigId == server.Id && h.VehicleId != null && !incomingVehicleIds.Contains(h.VehicleId.Value))
-                        .ToListAsync();
-                    foreach (var h in vehicleHaulagesToNullify)
-                    {
-                        h.VehicleId = null;
-                    }
-                    if (vehicleHaulagesToNullify.Count > 0)
-                    {
-                        await dbContext.SaveChangesAsync();
-                    }
 
                     var vehiclesToDelete = await dbContext.Vehicles
                         .Where(v => v.ServerConfigId == server.Id && !incomingVehicleIds.Contains(v.VehicleId))

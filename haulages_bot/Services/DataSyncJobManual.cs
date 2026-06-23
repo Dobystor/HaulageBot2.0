@@ -125,7 +125,10 @@ namespace haulages_bot.Services
                             Comments = acarreo.Comments,
                             materialTypeId = acarreo.materialTypeId,
                             ServerConfigId = serverId,
-                            Dateofcarries = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+                            Dateofcarries = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                            VehicleEconomicNumber = vehicleDetail.EconomicNumber,
+                            EmployeeFullName = employeeDetail.FullName,
+                            RouteDescription = routeDetail.description
                         });
 
                         await context.SaveChangesAsync();

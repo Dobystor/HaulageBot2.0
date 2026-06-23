@@ -171,6 +171,12 @@ $(document).ready(function () {
         }).fail(function() {
             hideLoadingScreen();
         });
+
+        // 3. Cargar tonelaje estimado diario
+        loadDailyTonnageEstimate(serverId);
+
+        // 4. Cargar config del bot RethinkDB
+        loadRethinkBotConfig(serverId);
     }
 
     // Cargar catálogos desde el backend y renderizar checkboxes
@@ -192,6 +198,22 @@ $(document).ready(function () {
         
         // Ocultar pantalla de carga
         setTimeout(hideLoadingScreen, 600);
+    }
+
+    // Cargar estimación de tonelaje diario para el servidor activo
+    function loadDailyTonnageEstimate(serverId) {
+        $.getJSON(`/api/ConfBoot/estimatedDailyTonnage?serverId=${serverId}`, function(data) {
+            if (data.estimatedTonnage > 0) {
+                $('#dailyTonnageValue').text(data.estimatedTonnage.toLocaleString('es-MX'));
+                $('#dailyTonnageDetail').text(data.detail);
+            } else {
+                $('#dailyTonnageValue').text('--');
+                $('#dailyTonnageDetail').text(data.detail || 'Configura el bot para ver estimación');
+            }
+        }).fail(function() {
+            $('#dailyTonnageValue').text('--');
+            $('#dailyTonnageDetail').text('Error al calcular');
+        });
     }
 
     function updateCheckboxCounter(containerId) {
@@ -962,6 +984,123 @@ $(document).ready(function () {
     function hideLoadingScreen() {
         $('#loading-screen').addClass('d-none');
     }
+
+    // ========== RETHINKDB BOT HANDLERS ==========
+    
+    // Cargar configuración del bot RethinkDB cuando se cambia de servidor
+    function loadRethinkBotConfig(serverId) {
+        // Obtener la IP del servidor activo como default para el host de RethinkDB
+        var serverApiUrl = $('#activeServerUrl').text().trim();
+        var defaultHost = serverApiUrl && serverApiUrl !== '--' ? serverApiUrl.replace(/^https?:\/\//, '').split(':')[0].split('/')[0] : '';
+
+        $.getJSON(`/api/RethinkBot/${serverId}`, function(config) {
+            $('#rethinkHost').val(config.rethinkHost || defaultHost);
+            $('#rethinkPort').val(config.rethinkPort || 28015);
+            $('#rethinkPassword').val(config.rethinkPassword || '');
+            $('#rethinkInterval').val(config.intervalSeconds || 30);
+            $('#rethinkMaxVehicles').val(config.maxSimultaneousVehicles || 5);
+            $('#rethinkBotSwitch').prop('checked', config.isEnabled);
+        }).fail(function() {
+            // Defaults
+            $('#rethinkHost').val(defaultHost);
+            $('#rethinkPort').val(28015);
+            $('#rethinkPassword').val('');
+            $('#rethinkInterval').val(30);
+            $('#rethinkMaxVehicles').val(5);
+            $('#rethinkBotSwitch').prop('checked', false);
+        });
+    }
+
+    // Guardar configuración
+    $('#btnSaveRethinkConfig').click(function() {
+        const payload = {
+            rethinkHost: $('#rethinkHost').val().trim(),
+            rethinkPort: parseInt($('#rethinkPort').val()) || 28015,
+            rethinkPassword: $('#rethinkPassword').val() || '',
+            intervalSeconds: parseInt($('#rethinkInterval').val()) || 30,
+            maxSimultaneousVehicles: parseInt($('#rethinkMaxVehicles').val()) || 5,
+            isEnabled: $('#rethinkBotSwitch').is(':checked')
+        };
+
+        if (payload.isEnabled && !payload.rethinkHost) {
+            alert('Ingresa el host de RethinkDB antes de activar el bot.');
+            return;
+        }
+
+        $.ajax({
+            url: `/api/RethinkBot/${activeServerId}`,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(payload),
+            success: function() {
+                alert('Configuración del bot RethinkDB guardada.');
+            },
+            error: function(xhr) {
+                alert('Error al guardar: ' + (xhr.responseJSON?.message || xhr.responseText));
+            }
+        });
+    });
+
+    // Toggle rápido del switch
+    $('#rethinkBotSwitch').change(function() {
+        const isEnabled = $(this).is(':checked');
+        const host = $('#rethinkHost').val().trim();
+
+        if (isEnabled && !host) {
+            alert('Configura el host de RethinkDB primero.');
+            $(this).prop('checked', false);
+            return;
+        }
+
+        $.ajax({
+            url: `/api/RethinkBot/${activeServerId}/toggle`,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(isEnabled),
+            success: function() {
+                appendRethinkLog(isEnabled ? 'Bot activado' : 'Bot desactivado');
+            },
+            error: function(xhr) {
+                alert('Error: ' + (xhr.responseJSON?.message || xhr.responseText));
+                $('#rethinkBotSwitch').prop('checked', !isEnabled);
+            }
+        });
+    });
+
+    // Log helper para RethinkDB
+    function appendRethinkLog(message, isError) {
+        const container = $('#rethinkLogArea');
+        const now = new Date().toLocaleTimeString();
+        const color = isError ? 'color: var(--danger)' : 'color: var(--text-muted)';
+        container.append(`<p style="${color}">[${now}] ${message}</p>`);
+        container.scrollTop(container[0].scrollHeight);
+        // Limitar a 100 líneas
+        const lines = container.find('p');
+        if (lines.length > 100) lines.first().remove();
+    }
+
+    // Escuchar notificaciones de SignalR que vengan del RethinkBot
+    window.addEventListener("ServerNotification", function(e) {
+        const payload = e.detail;
+        if (!payload || typeof payload !== 'object') return;
+        const sId = payload.serverId || payload.ServerId;
+        if (sId != activeServerId) return;
+        const message = payload.message || payload.Message || '';
+        if (message.includes('[RethinkBot]')) {
+            const isError = payload.error || payload.Error;
+            appendRethinkLog(message.replace('[RethinkBot] ', ''), isError);
+        }
+    });
+
+    // Polling de logs del bot RethinkDB (cada 10s si está activo)
+    setInterval(function() {
+        if (!$('#rethinkBotSwitch').is(':checked') || !activeServerId) return;
+        $.getJSON(`/api/RethinkBot/${activeServerId}/status`, function(data) {
+            if (data.lastLog) {
+                appendRethinkLog(data.lastLog);
+            }
+        }).fail(function() {});
+    }, 10000);
 });
 
 // Función de ayuda global expuesta para abrir el modal

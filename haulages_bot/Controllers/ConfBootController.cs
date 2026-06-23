@@ -84,5 +84,63 @@ namespace haulages_bot.Controllers
 
             return NotFound(new { success = false, message = "No se encontró configuración." });
         }
+
+        /// <summary>
+        /// Calcula el tonelaje estimado que se registraría en 24 horas según la configuración actual del bot.
+        /// Fórmula: (1440 / tiempoPromedio) * vehículos * capacidadPromedio * (1 + variacionPromedio/100)
+        /// </summary>
+        [HttpGet("estimatedDailyTonnage")]
+        public async Task<IActionResult> GetEstimatedDailyTonnage([FromQuery] int serverId)
+        {
+            var config = await _dbContext.DataConfigurationLocal
+                .Where(dc => dc.ServerConfigId == serverId)
+                .OrderByDescending(dc => dc.Id)
+                .FirstOrDefaultAsync();
+
+            if (config == null)
+            {
+                return Ok(new { estimatedTonnage = 0.0, detail = "Sin configuración" });
+            }
+
+            var timeList = JsonConvert.DeserializeObject<List<int>>(config.Time) ?? new List<int> { 5, 15 };
+            var tonnageVar = JsonConvert.DeserializeObject<List<int>>(config.TonnageVariation) ?? new List<int> { 80, 110 };
+            var selectedVehicleIds = JsonConvert.DeserializeObject<List<int>>(config.SelectedVehicles) ?? new List<int>();
+
+            if (selectedVehicleIds.Count == 0 || timeList.Count < 2)
+            {
+                return Ok(new { estimatedTonnage = 0.0, detail = "Sin vehículos o tiempos configurados" });
+            }
+
+            // Intervalo promedio en minutos
+            double avgInterval = (timeList[0] + timeList[1]) / 2.0;
+            if (avgInterval <= 0) avgInterval = 10;
+
+            // Acarreos estimados en 24 horas
+            double haulagesPerDay = 1440.0 / avgInterval;
+
+            // Capacidad promedio de los vehículos seleccionados (LoadingCapacity en toneladas)
+            var vehicles = await _dbContext.Vehicles
+                .Where(v => v.ServerConfigId == serverId && selectedVehicleIds.Contains(v.VehicleId))
+                .ToListAsync();
+
+            double avgCapacity = vehicles.Count > 0 ? (double)vehicles.Average(v => v.LoadingCapacity) : 25.0;
+
+            // Factor de variación de tonelaje (el porcentaje indica cuánto del peso nominal se carga)
+            // tonnageVar es [min%, max%], ej: [80, 110] significa entre 80% y 110% de la capacidad
+            double avgTonnageFactor = (tonnageVar[0] + tonnageVar[1]) / 200.0; // Promedio como fracción
+
+            // Estimado: acarreos/día * capacidad_promedio * factor_variación
+            double estimatedTonnage = haulagesPerDay * avgCapacity * avgTonnageFactor;
+
+            return Ok(new
+            {
+                estimatedTonnage = Math.Round(estimatedTonnage, 1),
+                haulagesPerDay = Math.Round(haulagesPerDay, 0),
+                avgCapacity = Math.Round(avgCapacity, 2),
+                avgInterval,
+                vehicleCount = vehicles.Count,
+                detail = $"~{Math.Round(haulagesPerDay, 0)} acarreos/día × {Math.Round(avgCapacity, 1)}t promedio"
+            });
+        }
     }
 }

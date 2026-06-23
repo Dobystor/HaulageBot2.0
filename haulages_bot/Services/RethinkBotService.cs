@@ -265,7 +265,7 @@ namespace haulages_bot.Services
             return null;
         }
 
-        private async Task<bool> ExecuteReqlHttp(string baseUrl, string query, int serverId, CancellationToken ct)
+        private async Task<bool> ExecuteReqlHttp(string baseUrl, string documentJson, int serverId, CancellationToken ct)
         {
             try
             {
@@ -278,10 +278,14 @@ namespace haulages_bot.Services
 
                 var url = $"{baseUrl}/ajax/reql/?conn_id={Uri.EscapeDataString(connId)}";
 
-                // El protocolo ReQL HTTP usa el AST serializado, no raw_query
-                // query aquí ya viene como el JSON del documento a insertar
-                // Formato: [1,[56,[[15,[[14,["SmartFlow"]],"HaulageProcess"]],{doc}],{"conflict":"replace"}],{"binary_format":"raw","time_format":"raw","profile":false}]
-                var reqlAst = $"[1,[56,[[15,[[14,[\"SmartFlow\"]],\"HaulageProcess\"]],{query},{{\"conflict\":\"replace\"}}],{{\"binary_format\":\"raw\",\"time_format\":\"raw\",\"profile\":false}}]";
+                // Construir el AST ReQL para INSERT con conflict replace
+                // [1, [INSERT_TERM, [TABLE_TERM, DOC, OPTIONS]], GLOBAL_OPTIONS]
+                // INSERT=56, TABLE=15, DB=14
+                var dbAst = "[14,[\"SmartFlow\"]]";
+                var tableAst = $"[15,[{dbAst},\"HaulageProcess\"]]";
+                var insertOptions = "{\"conflict\":\"replace\"}";
+                var globalOptions = "{\"binary_format\":\"raw\",\"time_format\":\"raw\",\"profile\":false}";
+                var reqlAst = $"[1,[56,[{tableAst},{documentJson},{insertOptions}]],{globalOptions}]";
 
                 var content = new StringContent(reqlAst, Encoding.UTF8, "application/json");
                 var response = await _httpClient.PostAsync(url, content, ct);

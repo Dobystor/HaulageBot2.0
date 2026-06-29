@@ -253,30 +253,45 @@ namespace haulages_bot.Services
                 var globalOptions = "{\"binary_format\":\"raw\",\"time_format\":\"raw\",\"profile\":false}";
                 var reqlJson = "[1,[56,[" + tableAst + "," + documentJson + "," + insertOptions + "]]," + globalOptions + "]";
 
-                // Escapar comillas para dentro del string de python
-                var escapedReql = reqlJson.Replace("'", "\\'");
-
-                // Script bash que usa python pipe (probado que funciona)
-                var scriptContent = "#!/bin/bash\n"
-                    + "CONN_ID=$(curl -sk -0 -X POST " + baseUrl + "/ajax/reql/open-new-connection)\n"
-                    + "python3 -c \"import struct,sys;q=b'" + escapedReql + "';sys.stdout.buffer.write(struct.pack('<q',1)+q)\" | curl -sk -0 -X POST \"" + baseUrl + "/ajax/reql/?conn_id=$CONN_ID\" -H \"Content-Type: application/octet-stream\" --data-binary @-\n";
-
-                var scriptFile = Path.GetTempFileName();
-                await File.WriteAllTextAsync(scriptFile, scriptContent, ct);
-
-                var psi = new System.Diagnostics.ProcessStartInfo
+                // Paso 1: Obtener conn_id via curl
+                var psi1 = new ProcessStartInfo
                 {
-                    FileName = "/bin/bash",
-                    Arguments = scriptFile,
+                    FileName = "/usr/bin/curl",
+                    Arguments = "-sk -0 -X POST " + baseUrl + "/ajax/reql/open-new-connection",
+                    RedirectStandardOutput = true,
                     UseShellExecute = false,
                     CreateNoWindow = true
                 };
+                string connId;
+                using (var proc1 = Process.Start(psi1))
+                {
+                    if (proc1 == null) return false;
+                    connId = (await proc1.StandardOutput.ReadToEndAsync()).Trim().Trim('"');
+                    await proc1.WaitForExitAsync(ct);
+                }
 
-                using var process = System.Diagnostics.Process.Start(psi);
-                if (process != null)
-                    await process.WaitForExitAsync(ct);
+                if (string.IsNullOrWhiteSpace(connId))
+                {
+                    _logger.LogWarning("[RethinkBot] conn_id vacío");
+                    return false;
+                }
 
-                try { File.Delete(scriptFile); } catch { }
+                // Paso 2: Ejecutar insert via bash -c con conn_id hardcodeado
+                var escapedReql = reqlJson.Replace("'", "'\\''");
+                var cmd = "python3 -c 'import struct,sys;q=b\"" + reqlJson.Replace("\"", "\\\"") + "\";sys.stdout.buffer.write(struct.pack(chr(60)+chr(113),1)+q)' | /usr/bin/curl -sk -0 -X POST '" + baseUrl + "/ajax/reql/?conn_id=" + connId + "' -H 'Content-Type: application/octet-stream' --data-binary @-";
+
+                var psi2 = new ProcessStartInfo
+                {
+                    FileName = "/bin/bash",
+                    ArgumentList = { "-c", cmd },
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+                using (var proc2 = Process.Start(psi2))
+                {
+                    if (proc2 != null)
+                        await proc2.WaitForExitAsync(ct);
+                }
 
                 return true;
             }

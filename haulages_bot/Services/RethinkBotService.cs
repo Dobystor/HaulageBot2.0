@@ -173,7 +173,8 @@ namespace haulages_bot.Services
                     EmployeeName = employee.FullName,
                     Route = route,
                     CurrentStatus = STATUS_LOADING,
-                    LastUpdate = DateTime.UtcNow.AddSeconds(-config.IntervalSeconds - 1) // Forzar que avance en el primer ciclo
+                    LastUpdate = DateTime.UtcNow.AddSeconds(-config.IntervalSeconds - 1), // Forzar que avance en el primer ciclo
+                    NeedsFirstUpdate = true
                 });
             }
 
@@ -184,8 +185,9 @@ namespace haulages_bot.Services
             foreach (var sim in vehicles.ToList())
             {
                 var elapsed = (DateTime.UtcNow - sim.LastUpdate).TotalSeconds;
-                if (elapsed < config.IntervalSeconds) continue;
+                if (elapsed < config.IntervalSeconds && !sim.NeedsFirstUpdate) continue;
 
+                sim.NeedsFirstUpdate = false;
                 anyAdvanced = true;
 
                 // Avanzar al siguiente estado
@@ -389,6 +391,7 @@ namespace haulages_bot.Services
             public haulages_bot.Models.Route Route { get; set; } = null!;
             public int CurrentStatus { get; set; }
             public DateTime LastUpdate { get; set; }
+            public bool NeedsFirstUpdate { get; set; } = true;
         }
     }
 }

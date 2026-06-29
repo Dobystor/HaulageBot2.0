@@ -285,22 +285,32 @@ namespace haulages_bot.Services
 
         private static async Task<string> RunCurl(string arguments)
         {
-            var psi = new System.Diagnostics.ProcessStartInfo
+            var outputFile = Path.GetTempFileName();
+            try
             {
-                FileName = "curl",
-                Arguments = arguments,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
+                var psi = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "/usr/bin/curl",
+                    Arguments = $"{arguments} -o {outputFile}",
+                    RedirectStandardOutput = false,
+                    RedirectStandardError = false,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
 
-            using var process = System.Diagnostics.Process.Start(psi);
-            if (process == null) return "";
+                using var process = System.Diagnostics.Process.Start(psi);
+                if (process == null) return "";
 
-            var output = await process.StandardOutput.ReadToEndAsync();
-            await process.WaitForExitAsync();
-            return output;
+                await process.WaitForExitAsync();
+                
+                if (File.Exists(outputFile))
+                    return await File.ReadAllTextAsync(outputFile);
+                return "";
+            }
+            finally
+            {
+                try { File.Delete(outputFile); } catch { }
+            }
         }
 
         private static int GetNextStatus(int current)

@@ -230,26 +230,26 @@ namespace haulages_bot.Services
         }
 
         // Tracking de conexiones HTTP (conn_id por servidor)
+        // Nota: cada request necesita su propio conn_id, no se reusan
         private readonly Dictionary<int, string> _connIds = new();
 
         private async Task<string?> GetOrCreateConnId(string baseUrl, int serverId, CancellationToken ct)
         {
-            if (_connIds.TryGetValue(serverId, out var existingId))
-                return existingId;
-
+            // Siempre crear una nueva conexión para cada query
             try
             {
                 var url = $"{baseUrl}/ajax/reql/open-new-connection";
-                var response = await _httpClient.PostAsync(url, null, ct);
+                var request = new HttpRequestMessage(HttpMethod.Post, url);
+                request.Version = new Version(1, 0);
+                request.Headers.ConnectionClose = true;
+
+                var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseContentRead, ct);
                 if (response.IsSuccessStatusCode)
                 {
                     var body = await response.Content.ReadAsStringAsync(ct);
-                    // Response is typically just the conn_id as a JSON string like "abc123=="
                     var connId = body.Trim().Trim('"');
                     if (!string.IsNullOrWhiteSpace(connId))
                     {
-                        _connIds[serverId] = connId;
-                        _logHistoryService.AddLog(serverId, $"[RethinkBot] Conexión abierta: {connId}");
                         return connId;
                     }
                 }
@@ -309,11 +309,6 @@ namespace haulages_bot.Services
                 {
                     var body = await response.Content.ReadAsStringAsync(ct);
                     _logger.LogWarning($"[RethinkBot] HTTP {response.StatusCode}: {body}");
-
-                    if (response.StatusCode == System.Net.HttpStatusCode.BadRequest && body.Contains("conn_id"))
-                    {
-                        _connIds.Remove(serverId);
-                    }
                     return false;
                 }
 
@@ -322,7 +317,6 @@ namespace haulages_bot.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "[RethinkBot] Error ejecutando query HTTP");
-                _connIds.Remove(serverId);
                 throw;
             }
         }

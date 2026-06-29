@@ -184,6 +184,8 @@ namespace haulages_bot.Services
             var baseUrl = $"https://{config.RethinkHost}:{config.RethinkPort}";
             bool anyAdvanced = false;
 
+            _logger.LogWarning($"[RethinkBot] Procesando {vehicles.Count} vehículos para servidor {config.ServerConfigId}. Host: {baseUrl}");
+
             foreach (var sim in vehicles.ToList())
             {
                 anyAdvanced = true;

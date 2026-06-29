@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
 using System.IdentityModel.Tokens.Jwt;
@@ -28,8 +29,9 @@ namespace haulages_bot.Services
         private readonly TokenService _tokenService;
         private readonly IHubContext<NotificationHub> _notificationHubContext;
         private readonly LogHistoryService _logHistoryService;
+        private readonly IConfiguration _configuration;
                
-        public DataSyncJobManual(IServiceProvider serviceProvider, ILogger<DataSyncJobManual> logger, TokenService tokenService, IHttpClientFactory httpClientFactory, IHubContext<NotificationHub> notificationHubContext, LogHistoryService logHistoryService)
+        public DataSyncJobManual(IServiceProvider serviceProvider, ILogger<DataSyncJobManual> logger, TokenService tokenService, IHttpClientFactory httpClientFactory, IHubContext<NotificationHub> notificationHubContext, LogHistoryService logHistoryService, IConfiguration configuration)
         {
             _serviceProvider = serviceProvider;
             _logger = logger;
@@ -38,6 +40,7 @@ namespace haulages_bot.Services
             _random = new Random();
             _notificationHubContext = notificationHubContext;
             _logHistoryService = logHistoryService;
+            _configuration = configuration;
         }
 
         public async Task SyncData(int serverId)
@@ -96,7 +99,7 @@ namespace haulages_bot.Services
                         EmployeeId = randomEmployee,
                         PathId = randomRoute,
                         Weight = tonnageWeight,
-                        Date = DateTime.Now,
+                        Date = GetAdjustedNow(server),
                         Comments = "Registro Manual SF Bot C#",
                         materialTypeId = resolvedMaterialTypeId,
                     };
@@ -125,7 +128,7 @@ namespace haulages_bot.Services
                             Comments = acarreo.Comments,
                             materialTypeId = acarreo.materialTypeId,
                             ServerConfigId = serverId,
-                            Dateofcarries = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                            Dateofcarries = GetAdjustedNow(server).ToString("yyyy-MM-dd HH:mm:ss"),
                             VehicleEconomicNumber = vehicleDetail.EconomicNumber,
                             EmployeeFullName = employeeDetail.FullName,
                             RouteDescription = routeDetail.description
@@ -152,6 +155,12 @@ namespace haulages_bot.Services
                     throw;
                 }
             }
+        }
+
+        private DateTime GetAdjustedNow(ServerConfig server)
+        {
+            int offset = server.TimezoneOffsetHours ?? _configuration.GetValue<int>("TimezoneOffsetHours", 0);
+            return DateTime.UtcNow.AddHours(offset);
         }
 
         /// <summary>

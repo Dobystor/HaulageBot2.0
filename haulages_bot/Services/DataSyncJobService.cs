@@ -296,7 +296,7 @@ public class DataSyncJobService : IHostedService, IDisposable
             EmployeeId = randomEmployee,
             PathId = randomRoute,
             Weight = tonnageWeight,
-            Date = DateTime.Now,
+            Date = GetAdjustedNow(server),
             Comments = "Auto-Registro SF Bot C#",
             materialTypeId = resolvedMaterialTypeId,
         };
@@ -325,7 +325,7 @@ public class DataSyncJobService : IHostedService, IDisposable
                 Comments = acarreo.Comments,
                 materialTypeId = acarreo.materialTypeId,
                 ServerConfigId = server.Id,
-                Dateofcarries = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                Dateofcarries = GetAdjustedNow(server).ToString("yyyy-MM-dd HH:mm:ss"),
                 VehicleEconomicNumber = vehicleDetail.EconomicNumber,
                 EmployeeFullName = employeeDetail.FullName,
                 RouteDescription = routeDetail.description
@@ -342,6 +342,15 @@ public class DataSyncJobService : IHostedService, IDisposable
             _logHistoryService.AddLog(server.Id, $"Error al registrar acarreo: {errorMessage}", true);
             await _notificationHubContext.Clients.All.SendAsync("ReceiveNotification", new { ServerId = server.Id, Error = true, Message = $"Error: {errorMessage}" });
         }
+    }
+
+    /// <summary>
+    /// Obtiene la hora actual ajustada según el offset de zona horaria del servidor.
+    /// </summary>
+    private DateTime GetAdjustedNow(ServerConfig server)
+    {
+        int offset = server.TimezoneOffsetHours ?? _configuration.GetValue<int>("TimezoneOffsetHours", 0);
+        return DateTime.UtcNow.AddHours(offset);
     }
 
     /// <summary>

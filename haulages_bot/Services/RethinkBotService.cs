@@ -237,79 +237,52 @@ namespace haulages_bot.Services
         {
             try
             {
-                // Usar curl directamente ya que HttpClient tiene problemas con el protocolo binario de RethinkDB
-                // Paso 1: Obtener conn_id
-                var connResult = await RunCurl($"-sk -0 -X POST {baseUrl}/ajax/reql/open-new-connection");
-                if (string.IsNullOrWhiteSpace(connResult))
-                {
-                    _logger.LogWarning("[RethinkBot] No se pudo obtener conn_id via curl");
-                    return false;
-                }
-                var connId = connResult.Trim().Trim('"');
-
-                // Paso 2: Construir el AST y enviarlo con curl via archivo temporal
+                // Construir el AST ReQL
                 var dbAst = "[14,[\"SmartFlow\"]]";
                 var tableAst = $"[15,[{dbAst},\"HaulageProcess\"]]";
                 var insertOptions = "{\"conflict\":\"replace\"}";
                 var globalOptions = "{\"binary_format\":\"raw\",\"time_format\":\"raw\",\"profile\":false}";
                 var reqlJson = $"[1,[56,[{tableAst},{documentJson},{insertOptions}]],{globalOptions}]";
 
-                // Escribir payload binario (8 bytes token + JSON) a archivo temporal
-                var tempFile = Path.GetTempFileName();
-                try
+                // Escribir payload binario a archivo temporal
+                var payloadFile = Path.GetTempFileName();
+                var jsonBytes = Encoding.UTF8.GetBytes(reqlJson);
+                var token = BitConverter.GetBytes((long)1);
+                using (var fs = File.Create(payloadFile))
                 {
-                    var jsonBytes = Encoding.UTF8.GetBytes(reqlJson);
-                    var token = BitConverter.GetBytes((long)1);
-                    using (var fs = File.Create(tempFile))
-                    {
-                        await fs.WriteAsync(token, 0, 8, ct);
-                        await fs.WriteAsync(jsonBytes, 0, jsonBytes.Length, ct);
-                    }
-
-                    var encodedConnId = Uri.EscapeDataString(connId);
-                    var result = await RunCurl($"-sk -0 -X POST \"{baseUrl}/ajax/reql/?conn_id={encodedConnId}\" -H \"Content-Type: application/octet-stream\" --data-binary @{tempFile}");
-
-                    return true; // Si curl no lanza excepción, consideramos exitoso
+                    await fs.WriteAsync(token, 0, 8, ct);
+                    await fs.WriteAsync(jsonBytes, 0, jsonBytes.Length, ct);
                 }
-                finally
-                {
-                    try { File.Delete(tempFile); } catch { }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "[RethinkBot] Error ejecutando query via curl");
-                throw;
-            }
-        }
 
-        private static async Task<string> RunCurl(string arguments)
-        {
-            var outputFile = Path.GetTempFileName();
-            try
-            {
+                // Script bash que hace open-connection + insert en un solo comando
+                var script = $@"#!/bin/bash
+CONN_ID=$(curl -sk -0 -X POST {baseUrl}/ajax/reql/open-new-connection)
+curl -sk -0 -X POST ""{baseUrl}/ajax/reql/?conn_id=$CONN_ID"" -H ""Content-Type: application/octet-stream"" --data-binary @{payloadFile}
+";
+                var scriptFile = Path.GetTempFileName();
+                await File.WriteAllTextAsync(scriptFile, script, ct);
+
                 var psi = new System.Diagnostics.ProcessStartInfo
                 {
-                    FileName = "/usr/bin/curl",
-                    Arguments = $"{arguments} -o {outputFile}",
-                    RedirectStandardOutput = false,
-                    RedirectStandardError = false,
+                    FileName = "/bin/bash",
+                    Arguments = scriptFile,
                     UseShellExecute = false,
                     CreateNoWindow = true
                 };
 
                 using var process = System.Diagnostics.Process.Start(psi);
-                if (process == null) return "";
+                if (process != null)
+                    await process.WaitForExitAsync(ct);
 
-                await process.WaitForExitAsync();
-                
-                if (File.Exists(outputFile))
-                    return await File.ReadAllTextAsync(outputFile);
-                return "";
+                try { File.Delete(payloadFile); } catch { }
+                try { File.Delete(scriptFile); } catch { }
+
+                return true;
             }
-            finally
+            catch (Exception ex)
             {
-                try { File.Delete(outputFile); } catch { }
+                _logger.LogError(ex, "[RethinkBot] Error ejecutando query via curl");
+                throw;
             }
         }
 

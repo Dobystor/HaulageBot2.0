@@ -255,12 +255,11 @@ namespace haulages_bot.Services
                 }
 
                 // Script bash que hace open-connection + insert en un solo comando
-                var script = $@"#!/bin/bash
-CONN_ID=$(curl -sk -0 -X POST {baseUrl}/ajax/reql/open-new-connection)
-curl -sk -0 -X POST ""{baseUrl}/ajax/reql/?conn_id=$CONN_ID"" -H ""Content-Type: application/octet-stream"" --data-binary @{payloadFile}
-";
+                var scriptContent = "#!/bin/bash\n"
+                    + "CONN_ID=$(curl -sk -0 -X POST " + baseUrl + "/ajax/reql/open-new-connection)\n"
+                    + "curl -sk -0 -X POST \"" + baseUrl + "/ajax/reql/?conn_id=$CONN_ID\" -H \"Content-Type: application/octet-stream\" --data-binary @" + payloadFile + "\n";
                 var scriptFile = Path.GetTempFileName();
-                await File.WriteAllTextAsync(scriptFile, script, ct);
+                await File.WriteAllTextAsync(scriptFile, scriptContent, ct);
 
                 var psi = new System.Diagnostics.ProcessStartInfo
                 {

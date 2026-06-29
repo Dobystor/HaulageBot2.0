@@ -186,10 +186,6 @@ namespace haulages_bot.Services
 
             foreach (var sim in vehicles.ToList())
             {
-                var elapsed = (DateTime.UtcNow - sim.LastUpdate).TotalSeconds;
-                if (elapsed < config.IntervalSeconds && !sim.NeedsFirstUpdate) continue;
-
-                sim.NeedsFirstUpdate = false;
                 anyAdvanced = true;
 
                 // Avanzar al siguiente estado

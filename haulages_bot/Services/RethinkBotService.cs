@@ -308,23 +308,31 @@ namespace haulages_bot.Services
 
         private static string BuildDocumentJson(SimulatedVehicle sim)
         {
-            // Documento compacto - solo campos esenciales para los monitores
-            // Mantener bajo 200 bytes para compatibilidad con RethinkDB HTTPS
+            // Documento mínimo para monitores de producción
+            // Limite ~180 bytes JSON para compatibilidad con RethinkDB HTTPS proxy
+            var loadPt = (sim.Route.loadPointName ?? "").Length > 12 
+                ? (sim.Route.loadPointName ?? "").Substring(0, 12) 
+                : (sim.Route.loadPointName ?? "");
+            var unloadPt = (sim.Route.unLoadPointName ?? "").Length > 12 
+                ? (sim.Route.unLoadPointName ?? "").Substring(0, 12) 
+                : (sim.Route.unLoadPointName ?? "");
+            var empName = (sim.EmployeeName ?? "").Length > 15
+                ? (sim.EmployeeName ?? "").Substring(0, 15)
+                : (sim.EmployeeName ?? "");
+            var vehNum = (sim.VehicleEconomicNumber ?? "").Length > 10
+                ? (sim.VehicleEconomicNumber ?? "").Substring(0, 10)
+                : (sim.VehicleEconomicNumber ?? "");
+
             var doc = new
             {
                 VehicleId = sim.VehicleId,
-                VehicleEconomicNumber = sim.VehicleEconomicNumber ?? "",
+                VehicleEconomicNumber = vehNum,
                 EmployeeId = sim.EmployeeId,
-                EmployeeName = sim.EmployeeName ?? "",
+                EmployeeName = empName,
                 Status = sim.CurrentStatus,
                 IsDeleted = false,
-                LoadPointId = sim.Route.loadPointId,
-                LoadPointName = sim.Route.loadPointName ?? "",
-                UnLoadPointId = sim.Route.unLoadPointId,
-                UnLoadPointName = sim.Route.unLoadPointName ?? "",
-                PathId = sim.Route.haulagePathId,
-                PathName = sim.Route.description ?? "",
-                MaterialId = sim.Route.materialTypeId ?? 0,
+                LoadPointName = loadPt,
+                UnLoadPointName = unloadPt,
                 MaterialName = sim.Route.materialType ?? "MINERAL"
             };
 

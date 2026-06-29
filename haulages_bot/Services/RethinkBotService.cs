@@ -298,7 +298,12 @@ namespace haulages_bot.Services
                 var content = new ByteArrayContent(payload);
                 content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
 
-                var response = await _httpClient.PostAsync(url, content, ct);
+                var request = new HttpRequestMessage(HttpMethod.Post, url);
+                request.Content = content;
+                request.Version = new Version(1, 0); // HTTP/1.0 para evitar issues con streaming binario
+                request.Headers.ConnectionClose = true;
+
+                var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
 
                 if (!response.IsSuccessStatusCode)
                 {

@@ -249,7 +249,7 @@ namespace haulages_bot.Services
                 // Construir el AST ReQL
                 var dbAst = "[14,[\"SmartFlow\"]]";
                 var tableAst = $"[15,[{dbAst},\"HaulageProcess\"]]";
-                var insertOptions = "{\"conflict\":\"replace\"}";
+                var insertOptions = "{\"conflict\":\"update\"}";
                 var globalOptions = "{\"binary_format\":\"raw\",\"time_format\":\"raw\",\"profile\":false}";
                 var reqlJson = $"[1,[56,[{tableAst},{documentJson},{insertOptions}]],{globalOptions}]";
 
@@ -308,32 +308,13 @@ namespace haulages_bot.Services
 
         private static string BuildDocumentJson(SimulatedVehicle sim)
         {
-            // Documento mínimo para monitores de producción
-            // Limite ~180 bytes JSON para compatibilidad con RethinkDB HTTPS proxy
-            var loadPt = (sim.Route.loadPointName ?? "").Length > 12 
-                ? (sim.Route.loadPointName ?? "").Substring(0, 12) 
-                : (sim.Route.loadPointName ?? "");
-            var unloadPt = (sim.Route.unLoadPointName ?? "").Length > 12 
-                ? (sim.Route.unLoadPointName ?? "").Substring(0, 12) 
-                : (sim.Route.unLoadPointName ?? "");
-            var empName = (sim.EmployeeName ?? "").Length > 15
-                ? (sim.EmployeeName ?? "").Substring(0, 15)
-                : (sim.EmployeeName ?? "");
-            var vehNum = (sim.VehicleEconomicNumber ?? "").Length > 10
-                ? (sim.VehicleEconomicNumber ?? "").Substring(0, 10)
-                : (sim.VehicleEconomicNumber ?? "");
-
+            // Documento ultra-mínimo — solo los campos que cambian
+            // Usamos conflict:update para no borrar campos existentes
             var doc = new
             {
                 VehicleId = sim.VehicleId,
-                VehicleEconomicNumber = vehNum,
-                EmployeeId = sim.EmployeeId,
-                EmployeeName = empName,
                 Status = sim.CurrentStatus,
-                IsDeleted = false,
-                LoadPointName = loadPt,
-                UnLoadPointName = unloadPt,
-                MaterialName = sim.Route.materialType ?? "MINERAL"
+                IsDeleted = false
             };
 
             return JsonConvert.SerializeObject(doc);

@@ -249,7 +249,7 @@ namespace haulages_bot.Services
                 // Construir el AST ReQL
                 var dbAst = "[14,[\"SmartFlow\"]]";
                 var tableAst = $"[15,[{dbAst},\"HaulageProcess\"]]";
-                var insertOptions = "{\"conflict\":\"update\"}";
+                var insertOptions = "{\"conflict\":\"replace\"}";
                 var globalOptions = "{\"binary_format\":\"raw\",\"time_format\":\"raw\",\"profile\":false}";
                 var reqlJson = $"[1,[56,[{tableAst},{documentJson},{insertOptions}]],{globalOptions}]";
 

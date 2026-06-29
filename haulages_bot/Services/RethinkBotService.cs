@@ -248,25 +248,19 @@ namespace haulages_bot.Services
             {
                 // Construir el AST ReQL
                 var dbAst = "[14,[\"SmartFlow\"]]";
-                var tableAst = $"[15,[{dbAst},\"HaulageProcess\"]]";
+                var tableAst = "[15,[" + dbAst + ",\"HaulageProcess\"]]";
                 var insertOptions = "{\"conflict\":\"replace\"}";
                 var globalOptions = "{\"binary_format\":\"raw\",\"time_format\":\"raw\",\"profile\":false}";
-                var reqlJson = $"[1,[56,[{tableAst},{documentJson},{insertOptions}]],{globalOptions}]";
+                var reqlJson = "[1,[56,[" + tableAst + "," + documentJson + "," + insertOptions + "]]," + globalOptions + "]";
 
-                // Escribir payload binario a archivo temporal
-                var payloadFile = Path.GetTempFileName();
-                var jsonBytes = Encoding.UTF8.GetBytes(reqlJson);
-                var token = BitConverter.GetBytes((long)1);
-                using (var fs = File.Create(payloadFile))
-                {
-                    await fs.WriteAsync(token, 0, 8, ct);
-                    await fs.WriteAsync(jsonBytes, 0, jsonBytes.Length, ct);
-                }
+                // Escapar comillas para dentro del string de python
+                var escapedReql = reqlJson.Replace("'", "\\'");
 
-                // Script bash que hace open-connection + insert en un solo comando
+                // Script bash que usa python pipe (probado que funciona)
                 var scriptContent = "#!/bin/bash\n"
-                    + "CONN_ID=$(curl -sk -X POST " + baseUrl + "/ajax/reql/open-new-connection)\n"
-                    + "curl -sk -X POST \"" + baseUrl + "/ajax/reql/?conn_id=$CONN_ID\" -H \"Content-Type: application/octet-stream\" --data-binary @" + payloadFile + "\n";
+                    + "CONN_ID=$(curl -sk -0 -X POST " + baseUrl + "/ajax/reql/open-new-connection)\n"
+                    + "python3 -c \"import struct,sys;q=b'" + escapedReql + "';sys.stdout.buffer.write(struct.pack('<q',1)+q)\" | curl -sk -0 -X POST \"" + baseUrl + "/ajax/reql/?conn_id=$CONN_ID\" -H \"Content-Type: application/octet-stream\" --data-binary @-\n";
+
                 var scriptFile = Path.GetTempFileName();
                 await File.WriteAllTextAsync(scriptFile, scriptContent, ct);
 
@@ -282,7 +276,6 @@ namespace haulages_bot.Services
                 if (process != null)
                     await process.WaitForExitAsync(ct);
 
-                try { File.Delete(payloadFile); } catch { }
                 try { File.Delete(scriptFile); } catch { }
 
                 return true;

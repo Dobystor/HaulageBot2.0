@@ -279,15 +279,23 @@ namespace haulages_bot.Services
                 var url = $"{baseUrl}/ajax/reql/?conn_id={Uri.EscapeDataString(connId)}";
 
                 // Construir el AST ReQL para INSERT con conflict replace
-                // [1, [INSERT_TERM, [TABLE_TERM, DOC, OPTIONS]], GLOBAL_OPTIONS]
-                // INSERT=56, TABLE=15, DB=14
                 var dbAst = "[14,[\"SmartFlow\"]]";
                 var tableAst = $"[15,[{dbAst},\"HaulageProcess\"]]";
                 var insertOptions = "{\"conflict\":\"replace\"}";
                 var globalOptions = "{\"binary_format\":\"raw\",\"time_format\":\"raw\",\"profile\":false}";
-                var reqlAst = $"[1,[56,[{tableAst},{documentJson},{insertOptions}]],{globalOptions}]";
+                var reqlJson = $"[1,[56,[{tableAst},{documentJson},{insertOptions}]],{globalOptions}]";
 
-                var content = new StringContent(reqlAst, Encoding.UTF8, "application/json");
+                // RethinkDB espera: 8 bytes token (int64 LE) + JSON directo
+                // Content-Type: application/octet-stream
+                var jsonBytes = Encoding.UTF8.GetBytes(reqlJson);
+                var token = BitConverter.GetBytes((long)1); // token = 1, little-endian
+                var payload = new byte[8 + jsonBytes.Length];
+                Array.Copy(token, 0, payload, 0, 8);
+                Array.Copy(jsonBytes, 0, payload, 8, jsonBytes.Length);
+
+                var content = new ByteArrayContent(payload);
+                content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
+
                 var response = await _httpClient.PostAsync(url, content, ct);
 
                 if (!response.IsSuccessStatusCode)

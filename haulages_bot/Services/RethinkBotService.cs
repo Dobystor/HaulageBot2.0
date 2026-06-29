@@ -190,9 +190,13 @@ namespace haulages_bot.Services
             {
                 anyAdvanced = true;
 
-                // Avanzar al siguiente estado
-                sim.CurrentStatus = GetNextStatus(sim.CurrentStatus);
-                sim.LastUpdate = DateTime.UtcNow;
+                try
+                {
+                    _logger.LogWarning($"[RethinkBot] Intentando insert VehicleId={sim.VehicleId} Status={sim.CurrentStatus}");
+
+                    // Avanzar al siguiente estado
+                    sim.CurrentStatus = GetNextStatus(sim.CurrentStatus);
+                    sim.LastUpdate = DateTime.UtcNow;
 
                 if (sim.CurrentStatus == STATUS_IDLE)
                 {
@@ -220,6 +224,11 @@ namespace haulages_bot.Services
                     };
                     _logHistoryService.AddLog(config.ServerConfigId,
                         $"[RethinkBot] {sim.VehicleEconomicNumber} → {statusName} | {sim.Route.description}");
+                }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"[RethinkBot] Error en foreach para VehicleId={sim.VehicleId}");
                 }
             }
 

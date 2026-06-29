@@ -7,6 +7,8 @@ using haulages_bot.Models;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Security;
@@ -233,92 +235,74 @@ namespace haulages_bot.Services
         // Nota: cada request necesita su propio conn_id, no se reusan
         private readonly Dictionary<int, string> _connIds = new();
 
-        private async Task<string?> GetOrCreateConnId(string baseUrl, int serverId, CancellationToken ct)
-        {
-            // Siempre crear una nueva conexión para cada query
-            try
-            {
-                var url = $"{baseUrl}/ajax/reql/open-new-connection";
-                var request = new HttpRequestMessage(HttpMethod.Post, url);
-                request.Version = new Version(1, 0);
-                request.Headers.ConnectionClose = true;
-
-                var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseContentRead, ct);
-                if (response.IsSuccessStatusCode)
-                {
-                    var body = await response.Content.ReadAsStringAsync(ct);
-                    var connId = body.Trim().Trim('"');
-                    if (!string.IsNullOrWhiteSpace(connId))
-                    {
-                        return connId;
-                    }
-                }
-                else
-                {
-                    var err = await response.Content.ReadAsStringAsync(ct);
-                    _logger.LogWarning($"[RethinkBot] Error abriendo conexión: {response.StatusCode} - {err}");
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "[RethinkBot] Error al abrir conexión HTTP");
-            }
-
-            return null;
-        }
-
         private async Task<bool> ExecuteReqlHttp(string baseUrl, string documentJson, int serverId, CancellationToken ct)
         {
             try
             {
-                var connId = await GetOrCreateConnId(baseUrl, serverId, ct);
-                if (connId == null)
+                // Usar curl directamente ya que HttpClient tiene problemas con el protocolo binario de RethinkDB
+                // Paso 1: Obtener conn_id
+                var connResult = await RunCurl($"-sk -0 -X POST {baseUrl}/ajax/reql/open-new-connection");
+                if (string.IsNullOrWhiteSpace(connResult))
                 {
-                    _logHistoryService.AddLog(serverId, "[RethinkBot] No se pudo obtener conn_id", true);
+                    _logger.LogWarning("[RethinkBot] No se pudo obtener conn_id via curl");
                     return false;
                 }
+                var connId = connResult.Trim().Trim('"');
 
-                var url = $"{baseUrl}/ajax/reql/?conn_id={Uri.EscapeDataString(connId)}";
-
-                // Construir el AST ReQL para INSERT con conflict replace
+                // Paso 2: Construir el AST y enviarlo con curl via archivo temporal
                 var dbAst = "[14,[\"SmartFlow\"]]";
                 var tableAst = $"[15,[{dbAst},\"HaulageProcess\"]]";
                 var insertOptions = "{\"conflict\":\"replace\"}";
                 var globalOptions = "{\"binary_format\":\"raw\",\"time_format\":\"raw\",\"profile\":false}";
                 var reqlJson = $"[1,[56,[{tableAst},{documentJson},{insertOptions}]],{globalOptions}]";
 
-                // RethinkDB espera: 8 bytes token (int64 LE) + JSON directo
-                // Content-Type: application/octet-stream
-                var jsonBytes = Encoding.UTF8.GetBytes(reqlJson);
-                var token = BitConverter.GetBytes((long)1); // token = 1, little-endian
-                var payload = new byte[8 + jsonBytes.Length];
-                Array.Copy(token, 0, payload, 0, 8);
-                Array.Copy(jsonBytes, 0, payload, 8, jsonBytes.Length);
-
-                var content = new ByteArrayContent(payload);
-                content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
-
-                var request = new HttpRequestMessage(HttpMethod.Post, url);
-                request.Content = content;
-                request.Version = new Version(1, 0); // HTTP/1.0 para evitar issues con streaming binario
-                request.Headers.ConnectionClose = true;
-
-                var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
-
-                if (!response.IsSuccessStatusCode)
+                // Escribir payload binario (8 bytes token + JSON) a archivo temporal
+                var tempFile = Path.GetTempFileName();
+                try
                 {
-                    var body = await response.Content.ReadAsStringAsync(ct);
-                    _logger.LogWarning($"[RethinkBot] HTTP {response.StatusCode}: {body}");
-                    return false;
-                }
+                    var jsonBytes = Encoding.UTF8.GetBytes(reqlJson);
+                    var token = BitConverter.GetBytes((long)1);
+                    using (var fs = File.Create(tempFile))
+                    {
+                        await fs.WriteAsync(token, 0, 8, ct);
+                        await fs.WriteAsync(jsonBytes, 0, jsonBytes.Length, ct);
+                    }
 
-                return true;
+                    var encodedConnId = Uri.EscapeDataString(connId);
+                    var result = await RunCurl($"-sk -0 -X POST \"{baseUrl}/ajax/reql/?conn_id={encodedConnId}\" -H \"Content-Type: application/octet-stream\" --data-binary @{tempFile}");
+
+                    return true; // Si curl no lanza excepción, consideramos exitoso
+                }
+                finally
+                {
+                    try { File.Delete(tempFile); } catch { }
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[RethinkBot] Error ejecutando query HTTP");
+                _logger.LogError(ex, "[RethinkBot] Error ejecutando query via curl");
                 throw;
             }
+        }
+
+        private static async Task<string> RunCurl(string arguments)
+        {
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "curl",
+                Arguments = arguments,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            using var process = System.Diagnostics.Process.Start(psi);
+            if (process == null) return "";
+
+            var output = await process.StandardOutput.ReadToEndAsync();
+            await process.WaitForExitAsync();
+            return output;
         }
 
         private static int GetNextStatus(int current)

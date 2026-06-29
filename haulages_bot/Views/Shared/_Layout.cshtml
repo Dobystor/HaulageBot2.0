@@ -5,22 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewBag.Title - Smartflow Multi-Bot</title>
 
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <!-- Tailwind CSS (local) -->
+    <script src="~/lib/tailwind.min.js"></script>
     <script>
         tailwind.config = {
             important: true
         }
     </script>
     
-    <!-- Google Fonts -->
+    <!-- Google Fonts (graceful degradation - falls back to system fonts if offline) -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Orbitron:wght@600;700;900&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
 
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <!-- Bootstrap 5 CSS (local) -->
+    <link href="~/lib/bootstrap.min.css" rel="stylesheet" />
     
-    <!-- Flatpickr Date Picker -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css" />
+    <!-- Flatpickr Date Picker (local) -->
+    <link rel="stylesheet" href="~/lib/flatpickr-dark.css" />
 
     <style>
         :root {
@@ -461,10 +461,10 @@
         }
     </style>
 
-    <!-- jQuery, Bootstrap, SignalR JS -->
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/5.0.7/signalr.min.js"></script>
+    <!-- jQuery, Bootstrap, SignalR JS (local) -->
+    <script src="~/lib/jquery-3.5.1.min.js"></script>
+    <script src="~/lib/bootstrap.bundle.min.js"></script>
+    <script src="~/lib/signalr.min.js"></script>
 </head>
 <body>
 
@@ -645,9 +645,9 @@
         });
     </script>
 
-    <!-- Flatpickr JS -->
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <script src="https://npmcdn.com/flatpickr/dist/l10n/es.js"></script>
+    <!-- Flatpickr JS (local) -->
+    <script src="~/lib/flatpickr.min.js"></script>
+    <script src="~/lib/flatpickr-es.js"></script>
 
     <!-- Custom layout execution and SignalR -->
     <script src="~/js/layout.js"></script>

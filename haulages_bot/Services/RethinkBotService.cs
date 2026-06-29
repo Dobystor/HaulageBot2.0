@@ -265,8 +265,8 @@ namespace haulages_bot.Services
 
                 // Script bash que hace open-connection + insert en un solo comando
                 var scriptContent = "#!/bin/bash\n"
-                    + "CONN_ID=$(curl -sk -0 -X POST " + baseUrl + "/ajax/reql/open-new-connection)\n"
-                    + "curl -sk -0 -X POST \"" + baseUrl + "/ajax/reql/?conn_id=$CONN_ID\" -H \"Content-Type: application/octet-stream\" --data-binary @" + payloadFile + "\n";
+                    + "CONN_ID=$(curl -sk -X POST " + baseUrl + "/ajax/reql/open-new-connection)\n"
+                    + "curl -sk -X POST \"" + baseUrl + "/ajax/reql/?conn_id=$CONN_ID\" -H \"Content-Type: application/octet-stream\" --data-binary @" + payloadFile + "\n";
                 var scriptFile = Path.GetTempFileName();
                 await File.WriteAllTextAsync(scriptFile, scriptContent, ct);
 
@@ -308,45 +308,24 @@ namespace haulages_bot.Services
 
         private static string BuildDocumentJson(SimulatedVehicle sim)
         {
-            var loadDate = DateTime.UtcNow.AddMinutes(-3).ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
-            var unloadDate = sim.CurrentStatus == STATUS_UNLOADING
-                ? DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
-                : "null";
-
+            // Documento compacto - solo campos esenciales para los monitores
+            // Mantener bajo 200 bytes para compatibilidad con RethinkDB HTTPS
             var doc = new
             {
                 VehicleId = sim.VehicleId,
-                VehicleEconomicNumber = sim.VehicleEconomicNumber,
-                VehicleCompanyId = sim.VehicleCompanyId,
-                VehicleCompanyName = "LASEC",
-                VehicleTypeId = sim.VehicleTypeId,
-                VehicleTypeName = "DUMP TRUCKS (HAULING) (VOLQUETE)",
+                VehicleEconomicNumber = sim.VehicleEconomicNumber ?? "",
                 EmployeeId = sim.EmployeeId,
-                EmployeeName = sim.EmployeeName,
-                EmployeeCompanyId = sim.VehicleCompanyId,
-                EmployeeCompanyName = "LASEC",
+                EmployeeName = sim.EmployeeName ?? "",
                 Status = sim.CurrentStatus,
                 IsDeleted = false,
                 LoadPointId = sim.Route.loadPointId,
-                LoadPointName = sim.Route.loadPointName,
+                LoadPointName = sim.Route.loadPointName ?? "",
                 UnLoadPointId = sim.Route.unLoadPointId,
-                UnLoadPointName = sim.Route.unLoadPointName,
+                UnLoadPointName = sim.Route.unLoadPointName ?? "",
                 PathId = sim.Route.haulagePathId,
-                PathName = sim.Route.description,
+                PathName = sim.Route.description ?? "",
                 MaterialId = sim.Route.materialTypeId ?? 0,
-                MaterialName = sim.Route.materialType ?? "MINERAL",
-                LoadDate = loadDate,
-                UnloadDate = sim.CurrentStatus == STATUS_UNLOADING ? unloadDate : (string?)null,
-                LoadEmployeeId = sim.EmployeeId,
-                LoadEmployeeName = sim.EmployeeName,
-                LoadEmployeeCompanyId = sim.VehicleCompanyId,
-                LoadEmployeeCompanyName = "LASEC",
-                LoadVehicleId = sim.VehicleId,
-                LoadVehicleEconomicNumber = sim.VehicleEconomicNumber,
-                LoadVehicleCompanyId = sim.VehicleCompanyId,
-                LoadVehicleCompanyName = "LASEC",
-                LoadVehicleTypeId = sim.VehicleTypeId,
-                LoadVehicleTypeName = "DUMP TRUCKS (HAULING) (VOLQUETE)"
+                MaterialName = sim.Route.materialType ?? "MINERAL"
             };
 
             return JsonConvert.SerializeObject(doc);

@@ -200,7 +200,9 @@ namespace haulages_bot.Services
                     {
                         using var scope = _scopeFactory.CreateScope();
                         var db = scope.ServiceProvider.GetRequiredService<dbboot>();
-                        var routes = await db.Routes.Where(r => r.ServerConfigId == config.ServerConfigId && r.isEnabled).ToListAsync(ct);
+                        var dataConfig = await db.DataConfigurationLocal.Where(dc => dc.ServerConfigId == config.ServerConfigId).OrderByDescending(dc => dc.Id).FirstOrDefaultAsync(ct);
+                        var selRouteIds = dataConfig != null ? JsonConvert.DeserializeObject<List<int>>(dataConfig.SelectedRoutes) ?? new() : new List<int>();
+                        var routes = await db.Routes.Where(r => r.ServerConfigId == config.ServerConfigId && selRouteIds.Contains(r.haulagePathId) && r.isEnabled).ToListAsync(ct);
                         if (routes.Any()) sim.Route = routes[random.Next(routes.Count)];
                     }
                 }
@@ -221,7 +223,9 @@ namespace haulages_bot.Services
                     {
                         using var scope = _scopeFactory.CreateScope();
                         var db = scope.ServiceProvider.GetRequiredService<dbboot>();
-                        var routes = await db.Routes.Where(r => r.ServerConfigId == config.ServerConfigId && r.isEnabled).ToListAsync(ct);
+                        var dataConfig = await db.DataConfigurationLocal.Where(dc => dc.ServerConfigId == config.ServerConfigId).OrderByDescending(dc => dc.Id).FirstOrDefaultAsync(ct);
+                        var selRouteIds = dataConfig != null ? JsonConvert.DeserializeObject<List<int>>(dataConfig.SelectedRoutes) ?? new() : new List<int>();
+                        var routes = await db.Routes.Where(r => r.ServerConfigId == config.ServerConfigId && selRouteIds.Contains(r.haulagePathId) && r.isEnabled).ToListAsync(ct);
                         if (routes.Any()) sim.Route = routes[random.Next(routes.Count)];
                     }
                 }

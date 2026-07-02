@@ -1003,6 +1003,7 @@ $(document).ready(function () {
             $('#rethinkPassword').val(config.rethinkPassword || '');
             $('#rethinkInterval').val(config.intervalSeconds || 30);
             $('#rethinkMaxVehicles').val(config.maxSimultaneousVehicles || 5);
+            $('#rethinkScooptramCount').val(config.scooptramCount || 3);
             $('#rethinkBotSwitch').prop('checked', config.isEnabled);
         }).fail(function() {
             // Defaults
@@ -1011,6 +1012,7 @@ $(document).ready(function () {
             $('#rethinkPassword').val('');
             $('#rethinkInterval').val(30);
             $('#rethinkMaxVehicles').val(5);
+            $('#rethinkScooptramCount').val(3);
             $('#rethinkBotSwitch').prop('checked', false);
         });
     }
@@ -1023,6 +1025,7 @@ $(document).ready(function () {
             rethinkPassword: $('#rethinkPassword').val() || '',
             intervalSeconds: parseInt($('#rethinkInterval').val()) || 30,
             maxSimultaneousVehicles: parseInt($('#rethinkMaxVehicles').val()) || 5,
+            scooptramCount: parseInt($('#rethinkScooptramCount').val()) || 3,
             isEnabled: $('#rethinkBotSwitch').is(':checked')
         };
 

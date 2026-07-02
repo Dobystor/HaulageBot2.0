@@ -60,6 +60,7 @@ namespace haulages_bot.Controllers
                     RethinkPassword = input.RethinkPassword ?? "",
                     IntervalSeconds = input.IntervalSeconds,
                     MaxSimultaneousVehicles = input.MaxSimultaneousVehicles,
+                    ScooptramCount = input.ScooptramCount,
                     IsEnabled = input.IsEnabled
                 };
                 _dbContext.RethinkBotConfigs.Add(newConfig);
@@ -72,6 +73,7 @@ namespace haulages_bot.Controllers
             existing.RethinkPassword = input.RethinkPassword ?? "";
             existing.IntervalSeconds = input.IntervalSeconds;
             existing.MaxSimultaneousVehicles = input.MaxSimultaneousVehicles;
+            existing.ScooptramCount = input.ScooptramCount;
             existing.IsEnabled = input.IsEnabled;
 
             await _dbContext.SaveChangesAsync();

@@ -99,7 +99,7 @@ namespace haulages_bot.Services
                         EmployeeId = randomEmployee,
                         PathId = randomRoute,
                         Weight = tonnageWeight,
-                        Date = DateTime.UtcNow,
+                        Date = DateTime.UtcNow.AddHours(-6),
                         Comments = "Registro Manual SF Bot C#",
                         materialTypeId = resolvedMaterialTypeId,
                     };
@@ -128,7 +128,7 @@ namespace haulages_bot.Services
                             Comments = acarreo.Comments,
                             materialTypeId = acarreo.materialTypeId,
                             ServerConfigId = serverId,
-                            Dateofcarries = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"),
+                            Dateofcarries = DateTime.UtcNow.AddHours(-6).ToString("yyyy-MM-dd HH:mm:ss"),
                             VehicleEconomicNumber = vehicleDetail.EconomicNumber,
                             EmployeeFullName = employeeDetail.FullName,
                             RouteDescription = routeDetail.description

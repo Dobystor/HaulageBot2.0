@@ -296,7 +296,7 @@ public class DataSyncJobService : IHostedService, IDisposable
             EmployeeId = randomEmployee,
             PathId = randomRoute,
             Weight = tonnageWeight,
-            Date = DateTime.UtcNow,
+            Date = DateTime.UtcNow.AddHours(-6),
             Comments = "Auto-Registro SF Bot C#",
             materialTypeId = resolvedMaterialTypeId,
         };
@@ -325,7 +325,7 @@ public class DataSyncJobService : IHostedService, IDisposable
                 Comments = acarreo.Comments,
                 materialTypeId = acarreo.materialTypeId,
                 ServerConfigId = server.Id,
-                Dateofcarries = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"),
+                Dateofcarries = DateTime.UtcNow.AddHours(-6).ToString("yyyy-MM-dd HH:mm:ss"),
                 VehicleEconomicNumber = vehicleDetail.EconomicNumber,
                 EmployeeFullName = employeeDetail.FullName,
                 RouteDescription = routeDetail.description

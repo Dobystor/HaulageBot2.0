@@ -412,7 +412,7 @@ namespace haulages_bot.Controllers
             public int Month { get; set; }
 
             [JsonProperty("tons")]
-            public int Tons { get; set; }
+            public decimal Tons { get; set; }
 
             [JsonProperty("minerals")]
             public List<PlanMineralDto>? Minerals { get; set; }

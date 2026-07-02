@@ -203,29 +203,27 @@ namespace haulages_bot.Controllers
                 .Select(g => g.First())
                 .ToList();
 
-            // 3. Agregar nuevos sitios con tonelaje aleatorio
+            // 3. Agregar nuevos sitios con tonelaje aleatorio en una sola llamada (array)
             var random = new Random();
-            int added = 0;
-            var errors = new List<string>();
-            foreach (var lp in loadPoints)
+            var newSites = loadPoints.Select(lp => (object)new
             {
-                var tons = random.Next(tonnageMin, tonnageMax + 1);
-                var (ok, responseBody) = await AddSite(server, tokenService, httpClientFactory, lp.loadPointId, lp.loadPointName, tons);
-                if (ok)
-                    added++;
-                else
-                    errors.Add($"placeId={lp.loadPointId} ({lp.loadPointName}): {responseBody}");
-            }
+                placeId = lp.loadPointId,
+                place = lp.loadPointName,
+                tons = random.Next(tonnageMin, tonnageMax + 1),
+                isConfirmedOre = true
+            }).ToList();
 
-            if (added > 0)
+            var (addSuccess, addResponse) = await AddSites(server, tokenService, httpClientFactory, newSites);
+
+            if (addSuccess)
             {
-                logHistory.AddLog(serverId, $"[InventoryBot] (Manual) {added} sitios nuevos agregados exitosamente.");
-                return Ok(new { message = $"{removed} eliminados, {added} nuevos agregados.", removed, added, errors });
+                logHistory.AddLog(serverId, $"[InventoryBot] (Manual) {newSites.Count} sitios nuevos agregados exitosamente.");
+                return Ok(new { message = $"{removed} eliminados, {newSites.Count} nuevos agregados.", removed, added = newSites.Count });
             }
             else
             {
                 logHistory.AddLog(serverId, "[InventoryBot] Error al agregar sitios nuevos.", true);
-                return StatusCode(500, new { message = "Error al agregar sitios de inventario.", errors });
+                return StatusCode(500, new { message = "Error al agregar sitios de inventario.", apiResponse = addResponse });
             }
         }
 
@@ -271,7 +269,7 @@ namespace haulages_bot.Controllers
             }
         }
 
-        private async Task<(bool success, string? responseBody)> AddSite(ServerConfig server, TokenService tokenService, IHttpClientFactory httpClientFactory, int placeId, string placeName, int tons)
+        private async Task<(bool success, string? responseBody)> AddSites(ServerConfig server, TokenService tokenService, IHttpClientFactory httpClientFactory, List<object> sites)
         {
             try
             {
@@ -280,14 +278,7 @@ namespace haulages_bot.Controllers
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
                 var host = server.ApiUrl.StartsWith("http") ? server.ApiUrl : $"https://{server.ApiUrl}";
-                var payload = new
-                {
-                    placeId = placeId,
-                    place = placeName,
-                    tons = tons,
-                    isConfirmedOre = true
-                };
-                var json = JsonConvert.SerializeObject(payload);
+                var json = JsonConvert.SerializeObject(sites);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
                 var response = await client.PostAsync($"{host}/service/haulages/api/v2/Inventory/sites/add", content);

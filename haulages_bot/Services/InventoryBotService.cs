@@ -128,19 +128,21 @@ namespace haulages_bot.Services
                 .Select(g => g.First())
                 .ToList();
 
-            // 3. Agregar nuevos sitios con tonelaje aleatorio
+            // 3. Agregar nuevos sitios con tonelaje aleatorio en una sola llamada (array)
             var random = new Random();
-            int added = 0;
-            foreach (var lp in loadPoints)
+            var newSites = loadPoints.Select(lp => new
             {
-                var tons = random.Next(config.TonnageMin, config.TonnageMax + 1);
-                var ok = await AddSite(server, tokenService, lp.loadPointId, lp.loadPointName, tons, ct);
-                if (ok) added++;
-            }
+                placeId = lp.loadPointId,
+                place = lp.loadPointName,
+                tons = random.Next(config.TonnageMin, config.TonnageMax + 1),
+                isConfirmedOre = true
+            }).Cast<object>().ToList();
 
-            if (added > 0)
+            var addSuccess = await AddSites(server, tokenService, newSites, ct);
+
+            if (addSuccess)
             {
-                _logHistoryService.AddLog(config.ServerConfigId, $"[InventoryBot] {added} sitios nuevos agregados exitosamente.");
+                _logHistoryService.AddLog(config.ServerConfigId, $"[InventoryBot] {newSites.Count} sitios nuevos agregados exitosamente.");
             }
             else
             {
@@ -237,7 +239,7 @@ namespace haulages_bot.Services
             }
         }
 
-        private async Task<bool> AddSite(ServerConfig server, TokenService tokenService, int placeId, string placeName, int tons, CancellationToken ct)
+        private async Task<bool> AddSites(ServerConfig server, TokenService tokenService, List<object> sites, CancellationToken ct)
         {
             try
             {
@@ -246,14 +248,7 @@ namespace haulages_bot.Services
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
                 var host = server.ApiUrl.StartsWith("http") ? server.ApiUrl : $"https://{server.ApiUrl}";
-                var payload = new
-                {
-                    placeId = placeId,
-                    place = placeName,
-                    tons = tons,
-                    isConfirmedOre = true
-                };
-                var json = JsonConvert.SerializeObject(payload);
+                var json = JsonConvert.SerializeObject(sites);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
                 var response = await client.PostAsync($"{host}/service/haulages/api/v2/Inventory/sites/add", content, ct);

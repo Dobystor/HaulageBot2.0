@@ -26,7 +26,7 @@ namespace haulages_bot.Controllers
             _dbContext = dbContext;
         }
 
-        /// <summary>Diagnóstico: ver qué devuelve la API de planes de producción para un año</summary>
+        /// <summary>Diagnóstico: ver qué devuelve la API de planes de producción para un año (raw)</summary>
         [HttpGet("{serverId}/debug/{year}")]
         public async Task<IActionResult> DebugPlans(
             int serverId, int year,
@@ -46,15 +46,8 @@ namespace haulages_bot.Controllers
             var response = await client.GetAsync(url);
             var body = await response.Content.ReadAsStringAsync();
 
-            object? parsed = null;
-            try { parsed = JsonConvert.DeserializeObject(body); } catch { }
-
-            return Ok(new
-            {
-                url,
-                statusCode = (int)response.StatusCode,
-                data = parsed ?? body
-            });
+            // Devolver raw text para ver la estructura real
+            return Content(body, "application/json");
         }
 
         /// <summary>Diagnóstico: ver qué devuelve la API de workdays</summary>

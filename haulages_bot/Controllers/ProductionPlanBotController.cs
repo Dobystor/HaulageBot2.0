@@ -127,6 +127,44 @@ namespace haulages_bot.Controllers
             return Content(body, "application/json");
         }
 
+        /// <summary>Debug: probar add/workdays y ver qué responde</summary>
+        [HttpPost("{serverId}/debug-addworkdays/{year}/{month}")]
+        public async Task<IActionResult> DebugAddWorkdays(
+            int serverId, int year, int month,
+            [FromServices] IHttpClientFactory httpClientFactory,
+            [FromServices] TokenService tokenService)
+        {
+            var server = await _dbContext.ServerConfigs.FindAsync(serverId);
+            if (server == null) return BadRequest("Servidor no encontrado");
+
+            var client = httpClientFactory.CreateClient();
+            var token = await tokenService.GetTokenAsync(server.Id);
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            var host = server.ApiUrl.StartsWith("http") ? server.ApiUrl : $"https://{server.ApiUrl}";
+
+            var daysInMonth = DateTime.DaysInMonth(year, month);
+            var days = Enumerable.Range(1, daysInMonth)
+                .Select(d => new DateTime(year, month, d).ToString("yyyy-MM-dd") + "T06:00:00.000Z")
+                .ToList();
+
+            var payload = new { year, month, days };
+            var json = JsonConvert.SerializeObject(payload);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var url = $"{host}/service/haulages/api/v2/ProductionPlans/add/workdays";
+            var response = await client.PostAsync(url, content);
+            var responseBody = await response.Content.ReadAsStringAsync();
+
+            return Ok(new
+            {
+                url,
+                status = (int)response.StatusCode,
+                responseHeaders = response.Headers.ToString(),
+                responseBody = string.IsNullOrEmpty(responseBody) ? "(vacío)" : responseBody
+            });
+        }
+
         /// <summary>
         /// Forzar actualización de planes para un mes.
         /// Solo actualiza rutas que ya tengan plan para ese mes (usa productionPlanId existente).

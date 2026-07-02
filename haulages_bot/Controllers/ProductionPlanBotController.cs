@@ -199,7 +199,7 @@ namespace haulages_bot.Controllers
                         continue;
                     }
 
-                    var existingMonth = route.Months.FirstOrDefault(m => m.Month == month);
+                    var existingMonth = route.Months.Where(m => m != null).FirstOrDefault(m => m.Month == month);
 
                     if (existingMonth == null || existingMonth.ProductionPlanId <= 0)
                     {

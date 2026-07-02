@@ -384,7 +384,7 @@ namespace haulages_bot.Services
                 PathName = sim.Route.description,
                 MaterialId = sim.Route.materialTypeId ?? 0,
                 MaterialName = sim.Route.materialType ?? "MINERAL",
-                LoadDate = new { reql_type = "TIME", epoch_time = ((DateTimeOffset)loadDate).ToUnixTimeSeconds(), timezone = "-06:00" },
+                LoadDate = new Dictionary<string, object> { ["$reql_type$"] = "TIME", ["epoch_time"] = ((DateTimeOffset)loadDate).ToUnixTimeSeconds(), ["timezone"] = "-06:00" },
                 UnloadDate = (object?)null,
                 LoadEmployeeId = sim.EmployeeId,
                 LoadEmployeeName = sim.EmployeeName,

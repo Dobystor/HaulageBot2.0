@@ -144,48 +144,33 @@ namespace haulages_bot.Services
                 });
             }
 
-            // Scooptrams: obtener de la API remota (no dependen de config general)
+            // Scooptrams: obtener de la DB local (todos los de tipo 1, no dependen de config general)
             var server = await db.ServerConfigs.FindAsync(config.ServerConfigId);
-            if (server != null && config.ScooptramCount > 0)
+            if (config.ScooptramCount > 0)
             {
-                _logger.LogWarning($"[RethinkBot] Intentando cargar {config.ScooptramCount} scooptrams desde API...");
-                try
+                var allScoops = await db.Vehicles.Where(v => v.ServerConfigId == config.ServerConfigId && v.VehicleTypeId == 1).ToListAsync(ct);
+                _logger.LogWarning($"[RethinkBot] Scooptrams en DB local: {allScoops.Count}");
+                var selectedScoops = allScoops.OrderBy(_ => random.Next()).Take(config.ScooptramCount).ToList();
+
+                foreach (var s in selectedScoops)
                 {
-                    using var scoopScope = _scopeFactory.CreateScope();
-                    var tokenService = scoopScope.ServiceProvider.GetRequiredService<TokenService>();
-                    var httpClient = _httpClientFactory.CreateClient();
-                    var token = await tokenService.GetTokenAsync(server.Id);
-                    httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-                    var host = server.ApiUrl.StartsWith("http") ? server.ApiUrl : $"https://{server.ApiUrl}";
-                    var resp = await httpClient.GetAsync($"{host}/Catalog/GetAllVehicles", ct);
-                    _logger.LogWarning($"[RethinkBot] GetAllVehicles status: {resp.StatusCode}");
-                    if (resp.IsSuccessStatusCode)
+                    var route = routes[random.Next(routes.Count)];
+                    var emp = employees[random.Next(employees.Count)];
+                    var company = companies.FirstOrDefault(c => c.CompanyId == s.CompanyId);
+                    var vType = vehicleTypes.FirstOrDefault(vt => vt.VehicleTypeId == 1);
+                    var empCompany = companies.FirstOrDefault(c => c.CompanyId == emp.CompanyId);
+
+                    fleet.Add(new SimVehicle
                     {
-                        var json = await resp.Content.ReadAsStringAsync(ct);
-                        var allApiVehicles = JsonConvert.DeserializeObject<List<ApiVehicleDto>>(json) ?? new();
-                        _logger.LogWarning($"[RethinkBot] Total vehículos API: {allApiVehicles.Count}, Scooptrams (TypeId=1): {allApiVehicles.Count(v => v.VehicleTypeId == 1)}");
-                        var apiScoops = allApiVehicles.Where(v => v.VehicleTypeId == 1).OrderBy(_ => random.Next()).Take(config.ScooptramCount).ToList();
-
-                        foreach (var s in apiScoops)
-                        {
-                            var route = routes[random.Next(routes.Count)];
-                            var emp = employees[random.Next(employees.Count)];
-                            var empCompany = companies.FirstOrDefault(c => c.CompanyId == emp.CompanyId);
-
-                            fleet.Add(new SimVehicle
-                            {
-                                VehicleId = s.VehicleId, EconomicNumber = s.EconomicNumber ?? "",
-                                CompanyId = s.CompanyId, CompanyName = s.CompanyName ?? "LASEC",
-                                VehicleTypeId = 1, VehicleTypeName = s.VehicleTypeName ?? "SCOOPTRAM FRONT LOADERS",
-                                EmployeeId = emp.EmployeeId, EmployeeName = emp.FullName,
-                                EmployeeCompanyId = emp.CompanyId, EmployeeCompanyName = empCompany?.Name ?? "LASEC",
-                                Route = route, Status = STATUS_LOADING,
-                                IsScooptram = true
-                            });
-                        }
-                    }
+                        VehicleId = s.VehicleId, EconomicNumber = s.EconomicNumber,
+                        CompanyId = s.CompanyId, CompanyName = company?.Name ?? "LASEC",
+                        VehicleTypeId = 1, VehicleTypeName = vType?.Name ?? "SCOOPTRAM FRONT LOADERS",
+                        EmployeeId = emp.EmployeeId, EmployeeName = emp.FullName,
+                        EmployeeCompanyId = emp.CompanyId, EmployeeCompanyName = empCompany?.Name ?? "LASEC",
+                        Route = route, Status = STATUS_LOADING,
+                        IsScooptram = true
+                    });
                 }
-                catch (Exception ex) { _logger.LogWarning($"[RethinkBot] Error obteniendo scooptrams: {ex.Message}"); }
             }
 
             // Asegurar al menos 1 en descarga

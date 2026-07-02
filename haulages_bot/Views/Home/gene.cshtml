@@ -687,146 +687,158 @@
                     </button>
                 </div>
 
-                <!-- Bots Avanzados: RethinkDB -->
-                <div class="mt-6 border-t border-slate-900/60 pt-6">
-                    <details class="group" id="rethinkBotSection">
-                        <summary class="flex items-center justify-between cursor-pointer list-none">
-                            <div class="flex items-center gap-2">
-                                <span class="material-symbols-outlined text-[20px] text-[#d4b84a]">database</span>
-                                <span class="font-cyber-title text-[11px] text-white font-bold uppercase tracking-wider">Bot RethinkDB (HaulageProcess)</span>
-                            </div>
-                            <span class="material-symbols-outlined text-[16px] text-slate-400 transition-transform group-open:rotate-180">expand_more</span>
-                        </summary>
-                        <div class="mt-4 space-y-3">
-                            <p class="text-[10px] text-slate-400">Simula datos en la tabla HaulageProcess de RethinkDB para que aparezcan en los monitores de producción en tiempo real y flota activa.</p>
-                            
-                            <div class="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label class="font-cyber-title text-[9px] text-slate-400 font-bold block mb-1">HOST RETHINKDB</label>
-                                    <input class="w-full cyber-input text-[11px] px-2 py-1.5 rounded" type="text" id="rethinkHost" placeholder="10.174.189.39">
-                                </div>
-                                <div>
-                                    <label class="font-cyber-title text-[9px] text-slate-400 font-bold block mb-1">PUERTO</label>
-                                    <input class="w-full cyber-input text-[11px] px-2 py-1.5 rounded" type="number" id="rethinkPort" value="28015">
-                                </div>
-                            </div>
-                            <div>
-                                <label class="font-cyber-title text-[9px] text-slate-400 font-bold block mb-1">CONTRASEÑA (vacía si no tiene)</label>
-                                <input class="w-full cyber-input text-[11px] px-2 py-1.5 rounded" type="password" id="rethinkPassword" placeholder="Dejar vacío para default">
-                            </div>
-                            <div class="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label class="font-cyber-title text-[9px] text-slate-400 font-bold block mb-1">INTERVALO (SEG)</label>
-                                    <input class="w-full cyber-input text-[11px] px-2 py-1.5 rounded" type="number" id="rethinkInterval" value="30" min="5">
-                                </div>
-                                <div>
-                                    <label class="font-cyber-title text-[9px] text-slate-400 font-bold block mb-1">VEHÍCULOS SIMULTÁNEOS</label>
-                                    <input class="w-full cyber-input text-[11px] px-2 py-1.5 rounded" type="number" id="rethinkMaxVehicles" value="5" min="1" max="20">
-                                </div>
-                            </div>
-
-                            <div class="flex items-center justify-between pt-2">
-                                <div>
-                                    <p class="font-cyber-title text-[11px] text-white font-bold">Activar Bot</p>
-                                    <p class="text-[10px] text-slate-400">Escribe datos en RethinkDB</p>
-                                </div>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input class="sr-only peer" type="checkbox" id="rethinkBotSwitch">
-                                    <div class="w-11 h-6 bg-white/10 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#d4b84a]"></div>
-                                </label>
-                            </div>
-
-                            <button class="w-full py-2 border border-[#d4b84a]/30 text-[#d4b84a] hover:bg-[#d4b84a]/10 font-cyber-title text-[11px] font-bold flex items-center justify-center gap-2 transition-all rounded-md" id="btnSaveRethinkConfig">
-                                <span class="material-symbols-outlined text-[16px]">save</span>
-                                GUARDAR CONFIGURACIÓN RETHINK
-                            </button>
-
-                            <!-- Mini Log del Bot RethinkDB -->
-                            <div class="mt-3 bg-black/40 border border-white/5 rounded-lg overflow-hidden">
-                                <div class="flex items-center justify-between px-3 py-2 border-b border-white/5">
-                                    <span class="font-cyber-title text-[9px] text-[#d4b84a] font-bold uppercase tracking-wider">LOGS RETHINKDB</span>
-                                    <button class="text-[9px] text-slate-500 hover:text-white transition-colors" onclick="$('#rethinkLogArea').empty().append('<p class=\'text-slate-500\'>[Limpio]</p>')">Limpiar</button>
-                                </div>
-                                <div class="h-28 overflow-y-auto terminal-scroll p-2 font-mono text-[10px] text-slate-400 space-y-0.5" id="rethinkLogArea">
-                                    <p class="text-slate-500">[Esperando actividad del bot...]</p>
-                                </div>
-                            </div>
-                        </div>
-                    </details>
-                </div>
-
-                <!-- Bots Avanzados: Inventarios -->
-                <div class="mt-6 border-t border-slate-900/60 pt-6">
-                    <details class="group" id="inventoryBotSection">
-                        <summary class="flex items-center justify-between cursor-pointer list-none">
-                            <div class="flex items-center gap-2">
-                                <span class="material-symbols-outlined text-[20px] text-[#39ff14]">inventory_2</span>
-                                <span class="font-cyber-title text-[11px] text-white font-bold uppercase tracking-wider">Bot Inventarios (Mineral)</span>
-                            </div>
-                            <span class="material-symbols-outlined text-[16px] text-slate-400 transition-transform group-open:rotate-180">expand_more</span>
-                        </summary>
-                        <div class="mt-4 space-y-3">
-                            <p class="text-[10px] text-slate-400">Actualiza automáticamente el inventario de mineral en SmartFlow cada cambio de turno. Asigna tonelaje aleatorio dentro del rango configurado a los sitios de carga de rutas de mineral activas.</p>
-                            
-                            <div class="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label class="font-cyber-title text-[9px] text-slate-400 font-bold block mb-1">TONELAJE MÍNIMO (t)</label>
-                                    <input class="w-full cyber-input text-[11px] px-2 py-1.5 rounded" type="number" id="inventoryTonnageMin" value="200" min="1">
-                                </div>
-                                <div>
-                                    <label class="font-cyber-title text-[9px] text-slate-400 font-bold block mb-1">TONELAJE MÁXIMO (t)</label>
-                                    <input class="w-full cyber-input text-[11px] px-2 py-1.5 rounded" type="number" id="inventoryTonnageMax" value="800" min="1">
-                                </div>
-                            </div>
-                            <div class="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label class="font-cyber-title text-[9px] text-slate-400 font-bold block mb-1">SITIOS MÍNIMOS POR TURNO</label>
-                                    <input class="w-full cyber-input text-[11px] px-2 py-1.5 rounded" type="number" id="inventorySitesMin" value="2" min="1">
-                                </div>
-                                <div>
-                                    <label class="font-cyber-title text-[9px] text-slate-400 font-bold block mb-1">SITIOS MÁXIMOS POR TURNO</label>
-                                    <input class="w-full cyber-input text-[11px] px-2 py-1.5 rounded" type="number" id="inventorySitesMax" value="5" min="1">
-                                </div>
-                            </div>
-
-                            <div class="flex items-center justify-between pt-2">
-                                <div>
-                                    <p class="font-cyber-title text-[11px] text-white font-bold">Activar Bot</p>
-                                    <p class="text-[10px] text-slate-400">Actualiza inventarios cada turno</p>
-                                </div>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input class="sr-only peer" type="checkbox" id="inventoryBotSwitch">
-                                    <div class="w-11 h-6 bg-white/10 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#39ff14]"></div>
-                                </label>
-                            </div>
-
-                            <button class="w-full py-2 border border-[#39ff14]/30 text-[#39ff14] hover:bg-[#39ff14]/10 font-cyber-title text-[11px] font-bold flex items-center justify-center gap-2 transition-all rounded-md" id="btnSaveInventoryConfig">
-                                <span class="material-symbols-outlined text-[16px]">save</span>
-                                GUARDAR CONFIGURACIÓN INVENTARIOS
-                            </button>
-
-                            <button class="w-full py-2 border border-[#ff9800]/30 text-[#ff9800] hover:bg-[#ff9800]/10 font-cyber-title text-[11px] font-bold flex items-center justify-center gap-2 transition-all rounded-md" id="btnForceInventory">
-                                <span class="material-symbols-outlined text-[16px]">bolt</span>
-                                FORZAR ACTUALIZACIÓN AHORA
-                            </button>
-
-                            <!-- Mini Log del Bot Inventarios -->
-                            <div class="mt-3 bg-black/40 border border-white/5 rounded-lg overflow-hidden">
-                                <div class="flex items-center justify-between px-3 py-2 border-b border-white/5">
-                                    <span class="font-cyber-title text-[9px] text-[#39ff14] font-bold uppercase tracking-wider">LOGS INVENTARIOS</span>
-                                    <button class="text-[9px] text-slate-500 hover:text-white transition-colors" onclick="$('#inventoryLogArea').empty().append('<p class=\'text-slate-500\'>[Limpio]</p>')">Limpiar</button>
-                                </div>
-                                <div class="h-28 overflow-y-auto terminal-scroll p-2 font-mono text-[10px] text-slate-400 space-y-0.5" id="inventoryLogArea">
-                                    <p class="text-slate-500">[Esperando actividad del bot...]</p>
-                                </div>
-                            </div>
-                        </div>
-                    </details>
-                </div>
+                <!-- Bots Avanzados: Movidos a sección independiente abajo -->
             </div>
         </div>
 
         </div><!-- Cierre del grid de 2 columnas -->
+
+        <!-- Bots Avanzados: Sección de 3 columnas -->
+        <div class="mt-6">
+            <div class="flex items-center gap-2 mb-4">
+                <span class="material-symbols-outlined text-[20px] text-[#bc34fa]">smart_toy</span>
+                <h3 class="font-cyber-title text-sm font-bold text-[#bc34fa] tracking-wider uppercase" style="text-shadow: 0 0 5px rgba(188, 52, 250, 0.3);">BOTS AVANZADOS</h3>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+                <!-- Bot RethinkDB -->
+                <div class="cyber-card rounded-lg p-5 flex flex-col" style="border-color: rgba(212, 184, 74, 0.15);">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[18px] text-[#d4b84a]">database</span>
+                            <span class="font-cyber-title text-[10px] text-white font-bold uppercase tracking-wider">RethinkDB</span>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input class="sr-only peer" type="checkbox" id="rethinkBotSwitch">
+                            <div class="w-9 h-5 bg-white/10 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#d4b84a]"></div>
+                        </label>
+                    </div>
+                    <p class="text-[9px] text-slate-500 mb-3 leading-relaxed">Simula datos en HaulageProcess para monitores de producción y flota activa.</p>
+                    
+                    <div class="space-y-2 flex-1">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="font-cyber-title text-[8px] text-slate-500 font-bold block mb-0.5">HOST</label>
+                                <input class="w-full cyber-input text-[10px] px-2 py-1 rounded" type="text" id="rethinkHost" placeholder="10.174.189.39">
+                            </div>
+                            <div>
+                                <label class="font-cyber-title text-[8px] text-slate-500 font-bold block mb-0.5">PUERTO</label>
+                                <input class="w-full cyber-input text-[10px] px-2 py-1 rounded" type="number" id="rethinkPort" value="28015">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="font-cyber-title text-[8px] text-slate-500 font-bold block mb-0.5">CONTRASEÑA</label>
+                            <input class="w-full cyber-input text-[10px] px-2 py-1 rounded" type="password" id="rethinkPassword" placeholder="Vacía si no tiene">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="font-cyber-title text-[8px] text-slate-500 font-bold block mb-0.5">INTERVALO (s)</label>
+                                <input class="w-full cyber-input text-[10px] px-2 py-1 rounded" type="number" id="rethinkInterval" value="30" min="5">
+                            </div>
+                            <div>
+                                <label class="font-cyber-title text-[8px] text-slate-500 font-bold block mb-0.5">VEH. SIMULTÁNEOS</label>
+                                <input class="w-full cyber-input text-[10px] px-2 py-1 rounded" type="number" id="rethinkMaxVehicles" value="5" min="1" max="20">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3 space-y-2">
+                        <button class="w-full py-1.5 border border-[#d4b84a]/25 text-[#d4b84a] hover:bg-[#d4b84a]/10 font-cyber-title text-[10px] font-bold flex items-center justify-center gap-1.5 transition-all rounded-md" id="btnSaveRethinkConfig">
+                            <span class="material-symbols-outlined text-[14px]">save</span> GUARDAR
+                        </button>
+                    </div>
+
+                    <!-- Mini Log -->
+                    <div class="mt-3 bg-black/50 border border-[#d4b84a]/10 rounded-md overflow-hidden">
+                        <div class="flex items-center justify-between px-2 py-1.5 border-b border-white/5">
+                            <span class="font-cyber-title text-[8px] text-[#d4b84a]/70 font-bold uppercase tracking-wider">ACTIVIDAD</span>
+                            <button class="text-[8px] text-slate-600 hover:text-white transition-colors" onclick="$('#rethinkLogArea').empty().append('<p class=\'text-slate-600\'>[Limpio]</p>')">×</button>
+                        </div>
+                        <div class="h-20 overflow-y-auto terminal-scroll p-1.5 font-mono text-[9px] text-slate-500 space-y-0.5" id="rethinkLogArea">
+                            <p class="text-slate-600">[Esperando...]</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bot Inventarios -->
+                <div class="cyber-card rounded-lg p-5 flex flex-col" style="border-color: rgba(57, 255, 20, 0.15);">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[18px] text-[#39ff14]">inventory_2</span>
+                            <span class="font-cyber-title text-[10px] text-white font-bold uppercase tracking-wider">Inventarios</span>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input class="sr-only peer" type="checkbox" id="inventoryBotSwitch">
+                            <div class="w-9 h-5 bg-white/10 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#39ff14]"></div>
+                        </label>
+                    </div>
+                    <p class="text-[9px] text-slate-500 mb-3 leading-relaxed">Actualiza inventario de mineral cada turno con tonelaje aleatorio en sitios de carga activos.</p>
+                    
+                    <div class="space-y-2 flex-1">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="font-cyber-title text-[8px] text-slate-500 font-bold block mb-0.5">TON. MÍN</label>
+                                <input class="w-full cyber-input text-[10px] px-2 py-1 rounded" type="number" id="inventoryTonnageMin" value="200" min="1">
+                            </div>
+                            <div>
+                                <label class="font-cyber-title text-[8px] text-slate-500 font-bold block mb-0.5">TON. MÁX</label>
+                                <input class="w-full cyber-input text-[10px] px-2 py-1 rounded" type="number" id="inventoryTonnageMax" value="800" min="1">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="font-cyber-title text-[8px] text-slate-500 font-bold block mb-0.5">SITIOS MÍN</label>
+                                <input class="w-full cyber-input text-[10px] px-2 py-1 rounded" type="number" id="inventorySitesMin" value="2" min="1">
+                            </div>
+                            <div>
+                                <label class="font-cyber-title text-[8px] text-slate-500 font-bold block mb-0.5">SITIOS MÁX</label>
+                                <input class="w-full cyber-input text-[10px] px-2 py-1 rounded" type="number" id="inventorySitesMax" value="5" min="1">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3 space-y-2">
+                        <button class="w-full py-1.5 border border-[#39ff14]/25 text-[#39ff14] hover:bg-[#39ff14]/10 font-cyber-title text-[10px] font-bold flex items-center justify-center gap-1.5 transition-all rounded-md" id="btnSaveInventoryConfig">
+                            <span class="material-symbols-outlined text-[14px]">save</span> GUARDAR
+                        </button>
+                        <button class="w-full py-1.5 border border-[#ff9800]/25 text-[#ff9800] hover:bg-[#ff9800]/10 font-cyber-title text-[10px] font-bold flex items-center justify-center gap-1.5 transition-all rounded-md" id="btnForceInventory">
+                            <span class="material-symbols-outlined text-[14px]">bolt</span> FORZAR AHORA
+                        </button>
+                    </div>
+
+                    <!-- Mini Log -->
+                    <div class="mt-3 bg-black/50 border border-[#39ff14]/10 rounded-md overflow-hidden">
+                        <div class="flex items-center justify-between px-2 py-1.5 border-b border-white/5">
+                            <span class="font-cyber-title text-[8px] text-[#39ff14]/70 font-bold uppercase tracking-wider">ACTIVIDAD</span>
+                            <button class="text-[8px] text-slate-600 hover:text-white transition-colors" onclick="$('#inventoryLogArea').empty().append('<p class=\'text-slate-600\'>[Limpio]</p>')">×</button>
+                        </div>
+                        <div class="h-20 overflow-y-auto terminal-scroll p-1.5 font-mono text-[9px] text-slate-500 space-y-0.5" id="inventoryLogArea">
+                            <p class="text-slate-600">[Esperando...]</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bot Planes de Producción (Placeholder) -->
+                <div class="cyber-card rounded-lg p-5 flex flex-col opacity-50" style="border-color: rgba(0, 212, 255, 0.15);">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[18px] text-[#00d4ff]">analytics</span>
+                            <span class="font-cyber-title text-[10px] text-white font-bold uppercase tracking-wider">Planes Producción</span>
+                        </div>
+                        <span class="font-cyber-title text-[8px] text-slate-500 font-bold uppercase px-2 py-0.5 border border-slate-700 rounded">PRONTO</span>
+                    </div>
+                    <p class="text-[9px] text-slate-500 mb-3 leading-relaxed">Generación automática de planes de producción por turno basados en la configuración de rutas activas.</p>
+                    
+                    <div class="flex-1 flex items-center justify-center">
+                        <div class="text-center py-6">
+                            <span class="material-symbols-outlined text-[32px] text-slate-700 block mb-2">construction</span>
+                            <p class="text-[10px] text-slate-600 font-cyber-title font-bold">EN DESARROLLO</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
 
         <!-- Bottom Table Section: Last Registered Carries -->
         <div class="mt-6">

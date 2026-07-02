@@ -160,6 +160,9 @@ namespace haulages_bot.Controllers
                 // 1. GET planes existentes
                 var client = httpClientFactory.CreateClient();
                 var token = await tokenService.GetTokenAsync(server.Id);
+                if (token == null)
+                    return StatusCode(500, new { message = "Error interno", detail = "Token es null" });
+
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
                 var plansResp = await client.GetAsync($"{host}/service/haulages/api/v2/productionplans/plans/extraction/mineral/{year}");
@@ -250,7 +253,7 @@ namespace haulages_bot.Controllers
             catch (Exception ex)
             {
                 logHistory.AddLog(serverId, $"[ProductionPlanBot] Error: {ex.Message}", true);
-                return StatusCode(500, new { message = "Error interno", detail = ex.Message });
+                return StatusCode(500, new { message = "Error interno", detail = ex.Message, stack = ex.StackTrace });
             }
         }
 

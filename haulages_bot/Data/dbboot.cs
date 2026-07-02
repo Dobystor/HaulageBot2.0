@@ -26,6 +26,7 @@ namespace haulages_bot.Data
         public DbSet<Material> Materials { get; set; }
         public DbSet<DataConfigurationLocal> DataConfigurationLocal { get; set; }
         public DbSet<RethinkBotConfig> RethinkBotConfigs { get; set; }
+        public DbSet<InventoryBotConfig> InventoryBotConfigs { get; set; }
 
         // Configuración del modelo de datos
         protected override void OnModelCreating(ModelBuilder modelBuilder)

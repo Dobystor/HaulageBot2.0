@@ -37,6 +37,9 @@ builder.Services.AddSingleton<LogHistoryService>();
 // Bot de RethinkDB (simulación de HaulageProcess)
 builder.Services.AddHostedService<RethinkBotService>();
 
+// Bot de Inventarios (actualización de inventarios de mineral)
+builder.Services.AddHostedService<InventoryBotService>();
+
 // Habilitar SignalR para la comunicación en tiempo real.
 builder.Services.AddSignalR();
 
@@ -117,6 +120,21 @@ using (var serviceProvider = builder.Services.BuildServiceProvider())
             try
             {
                 dbContext.Database.ExecuteSqlRaw("ALTER TABLE RethinkBotConfigs ADD COLUMN RethinkPassword TEXT NOT NULL DEFAULT ''");
+            } catch { /* ya existe */ }
+
+            // Crear tabla InventoryBotConfigs si no existe
+            try
+            {
+                dbContext.Database.ExecuteSqlRaw(@"
+                    CREATE TABLE IF NOT EXISTS InventoryBotConfigs (
+                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        ServerConfigId INTEGER NOT NULL,
+                        TonnageMin INTEGER NOT NULL DEFAULT 200,
+                        TonnageMax INTEGER NOT NULL DEFAULT 800,
+                        SitesMin INTEGER NOT NULL DEFAULT 2,
+                        SitesMax INTEGER NOT NULL DEFAULT 5,
+                        IsEnabled INTEGER NOT NULL DEFAULT 0
+                    )");
             } catch { /* ya existe */ }
 
             if (!dbContext.DataConfigurationLocal.Any())

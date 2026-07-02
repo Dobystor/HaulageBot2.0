@@ -177,6 +177,9 @@ $(document).ready(function () {
 
         // 4. Cargar config del bot RethinkDB
         loadRethinkBotConfig(serverId);
+
+        // 5. Cargar config del bot de Inventarios
+        loadInventoryBotConfig(serverId);
     }
 
     // Cargar catálogos desde el backend y renderizar checkboxes
@@ -1099,6 +1102,111 @@ $(document).ready(function () {
             }
         }).fail(function() {});
     }, 10000);
+
+    // ========== INVENTORY BOT HANDLERS ==========
+
+    // Cargar configuración del bot de Inventarios cuando se cambia de servidor
+    function loadInventoryBotConfig(serverId) {
+        $.getJSON(`/api/InventoryBot/${serverId}`, function(config) {
+            $('#inventoryTonnageMin').val(config.tonnageMin || 200);
+            $('#inventoryTonnageMax').val(config.tonnageMax || 800);
+            $('#inventorySitesMin').val(config.sitesMin || 2);
+            $('#inventorySitesMax').val(config.sitesMax || 5);
+            $('#inventoryBotSwitch').prop('checked', config.isEnabled);
+        }).fail(function() {
+            // Defaults
+            $('#inventoryTonnageMin').val(200);
+            $('#inventoryTonnageMax').val(800);
+            $('#inventorySitesMin').val(2);
+            $('#inventorySitesMax').val(5);
+            $('#inventoryBotSwitch').prop('checked', false);
+        });
+    }
+
+    // Guardar configuración de inventarios
+    $('#btnSaveInventoryConfig').click(function() {
+        const payload = {
+            tonnageMin: parseInt($('#inventoryTonnageMin').val()) || 200,
+            tonnageMax: parseInt($('#inventoryTonnageMax').val()) || 800,
+            sitesMin: parseInt($('#inventorySitesMin').val()) || 2,
+            sitesMax: parseInt($('#inventorySitesMax').val()) || 5,
+            isEnabled: $('#inventoryBotSwitch').is(':checked')
+        };
+
+        if (payload.tonnageMin >= payload.tonnageMax) {
+            alert('El tonelaje mínimo debe ser menor que el máximo.');
+            return;
+        }
+
+        if (payload.sitesMin >= payload.sitesMax) {
+            alert('Los sitios mínimos deben ser menores que los máximos.');
+            return;
+        }
+
+        $.ajax({
+            url: `/api/InventoryBot/${activeServerId}`,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(payload),
+            success: function() {
+                alert('Configuración del bot de Inventarios guardada.');
+            },
+            error: function(xhr) {
+                alert('Error al guardar: ' + (xhr.responseJSON?.message || xhr.responseText));
+            }
+        });
+    });
+
+    // Toggle rápido del switch de inventarios
+    $('#inventoryBotSwitch').change(function() {
+        const isEnabled = $(this).is(':checked');
+
+        $.ajax({
+            url: `/api/InventoryBot/${activeServerId}/toggle`,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(isEnabled),
+            success: function() {
+                appendInventoryLog(isEnabled ? 'Bot activado' : 'Bot desactivado');
+            },
+            error: function(xhr) {
+                alert('Error: ' + (xhr.responseJSON?.message || xhr.responseText));
+                $('#inventoryBotSwitch').prop('checked', !isEnabled);
+            }
+        });
+    });
+
+    // Log helper para Inventarios
+    function appendInventoryLog(message, isError) {
+        const container = $('#inventoryLogArea');
+        const now = new Date().toLocaleTimeString();
+        const color = isError ? 'color: var(--danger)' : 'color: var(--text-muted)';
+        container.find('.text-slate-500').first().remove();
+        container.append(`<p style="${color}"><span class="text-slate-500">[${now}]</span> ${message}</p>`);
+        container.scrollTop(container[0].scrollHeight);
+    }
+
+    // Escuchar notificaciones de SignalR que vengan del InventoryBot
+    window.addEventListener("ServerNotification", function(e) {
+        const payload = e.detail;
+        const sId = payload.serverId || payload.ServerConfigId;
+        if (sId != activeServerId) return;
+        const message = payload.message || payload.Message || '';
+        if (message.includes('[InventoryBot]')) {
+            const isError = payload.error || payload.Error;
+            appendInventoryLog(message.replace('[InventoryBot] ', ''), isError);
+        }
+    });
+
+    // Polling de logs del bot Inventarios (cada 15s si está activo)
+    setInterval(function() {
+        if (!$('#inventoryBotSwitch').is(':checked') || !activeServerId) return;
+        $.getJSON(`/api/InventoryBot/${activeServerId}/status`, function(data) {
+            if (data.lastLog) {
+                appendInventoryLog(data.lastLog);
+            }
+        }).fail(function() {});
+    }, 15000);
 });
 
 // Función de ayuda global expuesta para abrir el modal

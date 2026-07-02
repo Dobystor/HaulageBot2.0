@@ -11,404 +11,385 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Net.Security;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace haulages_bot.Services
 {
-    /// <summary>
-    /// Servicio en segundo plano que simula datos en la tabla HaulageProcess de RethinkDB
-    /// usando la API HTTP del Data Explorer (POST /ajax/reql/).
-    /// </summary>
     public class RethinkBotService : BackgroundService
     {
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger<RethinkBotService> _logger;
         private readonly LogHistoryService _logHistoryService;
-        private readonly HttpClient _httpClient;
+        private readonly IHttpClientFactory _httpClientFactory;
 
-        // Status del flujo de acarreo
-        private const int STATUS_IDLE = 0;
         private const int STATUS_LOADING = 3;
         private const int STATUS_HAULING = 5;
         private const int STATUS_UNLOADING = 7;
         private const int STATUS_RETURNING = 9;
 
-        // Tracking de vehículos activos por servidor
-        private readonly Dictionary<int, List<SimulatedVehicle>> _activeVehicles = new();
+        private readonly Dictionary<int, List<SimVehicle>> _fleet = new();
+        private int _lastWorkshiftId = -1;
 
-        public RethinkBotService(
-            IServiceScopeFactory scopeFactory,
-            ILogger<RethinkBotService> logger,
-            LogHistoryService logHistoryService)
+        public RethinkBotService(IServiceScopeFactory scopeFactory, ILogger<RethinkBotService> logger,
+            LogHistoryService logHistoryService, IHttpClientFactory httpClientFactory)
         {
             _scopeFactory = scopeFactory;
             _logger = logger;
             _logHistoryService = logHistoryService;
-
-            var handler = new HttpClientHandler
-            {
-                ServerCertificateCustomValidationCallback = (msg, cert, chain, errors) => true
-            };
-            _httpClient = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(15) };
+            _httpClientFactory = httpClientFactory;
         }
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        protected override async Task ExecuteAsync(CancellationToken ct)
         {
-            await Task.Delay(10000, stoppingToken);
-
-            while (!stoppingToken.IsCancellationRequested)
+            await Task.Delay(12000, ct);
+            while (!ct.IsCancellationRequested)
             {
-                try
-                {
-                    await ProcessAllServers(stoppingToken);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error en ciclo principal RethinkBotService");
-                }
-
-                await Task.Delay(5000, stoppingToken);
+                try { await Tick(ct); }
+                catch (Exception ex) { _logger.LogError(ex, "[RethinkBot] Error en tick"); }
+                await Task.Delay(5000, ct);
             }
         }
 
-        private async Task ProcessAllServers(CancellationToken ct)
+        private async Task Tick(CancellationToken ct)
         {
             using var scope = _scopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<dbboot>();
+            var tokenService = scope.ServiceProvider.GetRequiredService<TokenService>();
 
-            var configs = await db.RethinkBotConfigs
-                .Where(c => c.IsEnabled)
-                .ToListAsync(ct);
+            var configs = await db.RethinkBotConfigs.Where(c => c.IsEnabled).ToListAsync(ct);
 
             foreach (var config in configs)
             {
                 try
                 {
-                    await ProcessServer(db, config, ct);
+                    var server = await db.ServerConfigs.FindAsync(config.ServerConfigId);
+                    if (server == null) continue;
+
+                    // Detectar cambio de turno
+                    var workshiftId = await GetCurrentWorkshift(server, tokenService, ct);
+                    if (workshiftId > 0 && _lastWorkshiftId > 0 && workshiftId != _lastWorkshiftId)
+                    {
+                        // Cambio de turno: marcar todos como deleted y limpiar flota
+                        await MarkAllDeleted(config, ct);
+                        _fleet.Remove(config.ServerConfigId);
+                        _logHistoryService.AddLog(config.ServerConfigId, $"[RethinkBot] Cambio de turno ({workshiftId}). Flota renovada.");
+                    }
+                    if (workshiftId > 0) _lastWorkshiftId = workshiftId;
+
+                    // Inicializar flota si no existe
+                    if (!_fleet.ContainsKey(config.ServerConfigId))
+                    {
+                        await InitFleet(db, config, ct);
+                    }
+
+                    // Avanzar status de cada vehículo
+                    await AdvanceFleet(config, ct);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, $"Error RethinkBot servidor {config.ServerConfigId}");
-                    _logHistoryService.AddLog(config.ServerConfigId, $"[RethinkBot] Error: {ex.Message}", true);
+                    _logger.LogError(ex, $"[RethinkBot] Error server {config.ServerConfigId}");
                 }
-            }
-
-            // Limpiar servidores deshabilitados
-            var enabledIds = configs.Select(c => c.ServerConfigId).ToHashSet();
-            var toRemove = _activeVehicles.Keys.Where(k => !enabledIds.Contains(k)).ToList();
-            foreach (var id in toRemove)
-            {
-                _activeVehicles.Remove(id);
             }
         }
 
-        private async Task ProcessServer(dbboot db, RethinkBotConfig config, CancellationToken ct)
+        private async Task InitFleet(dbboot db, RethinkBotConfig config, CancellationToken ct)
         {
-            if (!_activeVehicles.ContainsKey(config.ServerConfigId))
-            {
-                _activeVehicles[config.ServerConfigId] = new List<SimulatedVehicle>();
-            }
-
-            var vehicles = _activeVehicles[config.ServerConfigId];
-
-            // Cargar catálogos
             var dataConfig = await db.DataConfigurationLocal
                 .Where(dc => dc.ServerConfigId == config.ServerConfigId)
-                .OrderByDescending(dc => dc.Id)
-                .FirstOrDefaultAsync(ct);
-
-            if (dataConfig == null)
-            {
-                _logHistoryService.AddLog(config.ServerConfigId, "[RethinkBot] Sin configuración de bot.", true);
-                return;
-            }
+                .OrderByDescending(dc => dc.Id).FirstOrDefaultAsync(ct);
+            if (dataConfig == null) return;
 
             var selectedVehicleIds = JsonConvert.DeserializeObject<List<int>>(dataConfig.SelectedVehicles) ?? new();
             var selectedRouteIds = JsonConvert.DeserializeObject<List<int>>(dataConfig.SelectedRoutes) ?? new();
             var selectedEmployeeIds = JsonConvert.DeserializeObject<List<int>>(dataConfig.SelectedEmployees) ?? new();
 
-            if (!selectedVehicleIds.Any() || !selectedRouteIds.Any() || !selectedEmployeeIds.Any())
-            {
-                _logHistoryService.AddLog(config.ServerConfigId, "[RethinkBot] Sin vehículos/rutas/operadores configurados.", true);
-                return;
-            }
+            var vehicles = await db.Vehicles.Where(v => v.ServerConfigId == config.ServerConfigId && selectedVehicleIds.Contains(v.VehicleId)).ToListAsync(ct);
+            var routes = await db.Routes.Where(r => r.ServerConfigId == config.ServerConfigId && selectedRouteIds.Contains(r.haulagePathId) && r.isEnabled).ToListAsync(ct);
+            var employees = await db.Employees.Where(e => e.ServerConfigId == config.ServerConfigId && selectedEmployeeIds.Contains(e.EmployeeId)).ToListAsync(ct);
+            var companies = await db.Companies.Where(c => c.ServerConfigId == config.ServerConfigId).ToListAsync(ct);
+            var vehicleTypes = await db.Set<VehicleType>().Where(vt => vt.ServerConfigId == config.ServerConfigId).ToListAsync(ct);
 
-            var dbVehicles = await db.Vehicles
-                .Where(v => v.ServerConfigId == config.ServerConfigId && selectedVehicleIds.Contains(v.VehicleId))
-                .ToListAsync(ct);
-            var dbRoutes = await db.Routes
-                .Where(r => r.ServerConfigId == config.ServerConfigId && selectedRouteIds.Contains(r.haulagePathId))
-                .ToListAsync(ct);
-            var dbEmployees = await db.Employees
-                .Where(e => e.ServerConfigId == config.ServerConfigId && selectedEmployeeIds.Contains(e.EmployeeId))
-                .ToListAsync(ct);
-            var dbCompanies = await db.Companies
-                .Where(c => c.ServerConfigId == config.ServerConfigId)
-                .ToListAsync(ct);
-            var dbVehicleTypes = await db.Set<VehicleType>()
-                .Where(vt => vt.ServerConfigId == config.ServerConfigId)
-                .ToListAsync(ct);
-            // Scooptrams: VehicleTypeId = 1 (SCOOPTRAM FRONT LOADERS)
-            var scooptrams = dbVehicles.Where(v => v.VehicleTypeId == 1).ToList();
-
-            if (!dbVehicles.Any() || !dbRoutes.Any() || !dbEmployees.Any())
-            {
-                _logHistoryService.AddLog(config.ServerConfigId, "[RethinkBot] Catálogos vacíos. Sincroniza primero.", true);
-                return;
-            }
+            if (!vehicles.Any() || !routes.Any() || !employees.Any()) return;
 
             var random = new Random();
+            var fleet = new List<SimVehicle>();
 
-            // Agregar vehículos si hay espacio
-            int attempts = 0;
-            while (vehicles.Count < config.MaxSimultaneousVehicles && vehicles.Count < dbVehicles.Count && attempts < dbVehicles.Count * 2)
+            // Volteos/Bajo perfil (de la config general)
+            var dumpTrucks = vehicles.Where(v => v.VehicleTypeId != 1).ToList(); // No scooptrams
+            var numTrucks = Math.Min(config.MaxSimultaneousVehicles, dumpTrucks.Count);
+            var selectedTrucks = dumpTrucks.OrderBy(_ => random.Next()).Take(numTrucks).ToList();
+
+            foreach (var v in selectedTrucks)
             {
-                attempts++;
-                var vehicle = dbVehicles[random.Next(dbVehicles.Count)];
-                if (vehicles.Any(v => v.VehicleId == vehicle.VehicleId)) continue;
+                var route = routes[random.Next(routes.Count)];
+                var emp = employees[random.Next(employees.Count)];
+                var company = companies.FirstOrDefault(c => c.CompanyId == v.CompanyId);
+                var vType = vehicleTypes.FirstOrDefault(vt => vt.VehicleTypeId == v.VehicleTypeId);
+                var empCompany = companies.FirstOrDefault(c => c.CompanyId == emp.CompanyId);
 
-                var route = dbRoutes[random.Next(dbRoutes.Count)];
-                var employee = dbEmployees[random.Next(dbEmployees.Count)];
-                var vehicleCompany = dbCompanies.FirstOrDefault(c => c.CompanyId == vehicle.CompanyId);
-                var vehicleType = dbVehicleTypes.FirstOrDefault(vt => vt.VehicleTypeId == vehicle.VehicleTypeId);
-                var employeeCompany = dbCompanies.FirstOrDefault(c => c.CompanyId == employee.CompanyId);
-                var loadVehicle = scooptrams.Any() ? scooptrams[random.Next(scooptrams.Count)] : vehicle;
-                var loadVehicleCompany = dbCompanies.FirstOrDefault(c => c.CompanyId == loadVehicle.CompanyId);
-                var loadVehicleType = dbVehicleTypes.FirstOrDefault(vt => vt.VehicleTypeId == loadVehicle.VehicleTypeId);
-
-                vehicles.Add(new SimulatedVehicle
+                fleet.Add(new SimVehicle
                 {
-                    VehicleId = vehicle.VehicleId,
-                    VehicleEconomicNumber = vehicle.EconomicNumber,
-                    VehicleCompanyId = vehicle.CompanyId,
-                    VehicleCompanyName = vehicleCompany?.Name ?? "LASEC",
-                    VehicleTypeId = vehicle.VehicleTypeId,
-                    VehicleTypeName = vehicleType?.Name ?? "DUMP TRUCKS (HAULING) (VOLQUETE)",
-                    EmployeeId = employee.EmployeeId,
-                    EmployeeName = employee.FullName,
-                    EmployeeCompanyId = employee.CompanyId,
-                    EmployeeCompanyName = employeeCompany?.Name ?? "LASEC",
-                    Route = route,
-                    CurrentStatus = STATUS_LOADING,
-                    LastUpdate = DateTime.UtcNow.AddSeconds(-config.IntervalSeconds - 1),
-                    NeedsFirstUpdate = true,
-                    LoadVehicleId = loadVehicle.VehicleId,
-                    LoadVehicleEconomicNumber = loadVehicle.EconomicNumber,
-                    LoadVehicleCompanyId = loadVehicle.CompanyId,
-                    LoadVehicleCompanyName = loadVehicleCompany?.Name ?? "LASEC",
-                    LoadVehicleTypeId = loadVehicle.VehicleTypeId,
-                    LoadVehicleTypeName = loadVehicleType?.Name ?? "SCOOPTRAM FRONT LOADERS"
+                    VehicleId = v.VehicleId, EconomicNumber = v.EconomicNumber,
+                    CompanyId = v.CompanyId, CompanyName = company?.Name ?? "LASEC",
+                    VehicleTypeId = v.VehicleTypeId, VehicleTypeName = vType?.Name ?? "DUMP TRUCKS (HAULING) (VOLQUETE)",
+                    EmployeeId = emp.EmployeeId, EmployeeName = emp.FullName,
+                    EmployeeCompanyId = emp.CompanyId, EmployeeCompanyName = empCompany?.Name ?? "LASEC",
+                    Route = route, Status = STATUS_LOADING + (random.Next(4) * 2), // Random initial status
+                    IsScooptram = false
                 });
             }
 
-            // Avanzar estado de cada vehículo
-            var baseUrl = $"https://{config.RethinkHost}:{config.RethinkPort}";
-            bool anyAdvanced = false;
+            // Scooptrams (siempre incluir, no dependen de config general)
+            var allVehicles = await db.Vehicles.Where(v => v.ServerConfigId == config.ServerConfigId && v.VehicleTypeId == 1).ToListAsync(ct);
+            var numScoops = Math.Min(config.ScooptramCount, allVehicles.Count);
+            var selectedScoops = allVehicles.OrderBy(_ => random.Next()).Take(numScoops).ToList();
 
-            _logger.LogWarning($"[RethinkBot] Procesando {vehicles.Count} vehículos para servidor {config.ServerConfigId}. Host: {baseUrl}");
-
-            foreach (var sim in vehicles.ToList())
+            foreach (var s in selectedScoops)
             {
-                anyAdvanced = true;
+                var route = routes[random.Next(routes.Count)];
+                var emp = employees[random.Next(employees.Count)];
+                var company = companies.FirstOrDefault(c => c.CompanyId == s.CompanyId);
+                var vType = vehicleTypes.FirstOrDefault(vt => vt.VehicleTypeId == 1);
+                var empCompany = companies.FirstOrDefault(c => c.CompanyId == emp.CompanyId);
 
-                try
+                fleet.Add(new SimVehicle
                 {
-                    _logger.LogWarning($"[RethinkBot] Intentando insert VehicleId={sim.VehicleId} Status={sim.CurrentStatus}");
-
-                    // Avanzar al siguiente estado
-                    sim.CurrentStatus = GetNextStatus(sim.CurrentStatus);
-                    sim.LastUpdate = DateTime.UtcNow;
-
-                if (sim.CurrentStatus == STATUS_IDLE)
-                {
-                    // Reasignar ruta/empleado para nuevo ciclo
-                    sim.Route = dbRoutes[random.Next(dbRoutes.Count)];
-                    var emp = dbEmployees[random.Next(dbEmployees.Count)];
-                    sim.EmployeeId = emp.EmployeeId;
-                    sim.EmployeeName = emp.FullName;
-                    sim.CurrentStatus = STATUS_LOADING;
-                }
-
-                // Construir y enviar query a RethinkDB via HTTP
-                var doc = BuildDocumentJson(sim);
-                var success = await ExecuteReqlHttp(baseUrl, doc, config.ServerConfigId, ct);
-
-                if (success)
-                {
-                    var statusName = sim.CurrentStatus switch
-                    {
-                        STATUS_LOADING => "CARGANDO",
-                        STATUS_HAULING => "EN TRÁNSITO",
-                        STATUS_UNLOADING => "DESCARGANDO",
-                        STATUS_RETURNING => "REGRESANDO",
-                        _ => "IDLE"
-                    };
-                    _logHistoryService.AddLog(config.ServerConfigId,
-                        $"[RethinkBot] {sim.VehicleEconomicNumber} → {statusName} | {sim.Route.description}");
-                }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, $"[RethinkBot] Error en foreach para VehicleId={sim.VehicleId}");
-                }
+                    VehicleId = s.VehicleId, EconomicNumber = s.EconomicNumber,
+                    CompanyId = s.CompanyId, CompanyName = company?.Name ?? "LASEC",
+                    VehicleTypeId = 1, VehicleTypeName = vType?.Name ?? "SCOOPTRAM FRONT LOADERS",
+                    EmployeeId = emp.EmployeeId, EmployeeName = emp.FullName,
+                    EmployeeCompanyId = emp.CompanyId, EmployeeCompanyName = empCompany?.Name ?? "LASEC",
+                    Route = route, Status = STATUS_LOADING, // Scoops siempre cargando
+                    IsScooptram = true
+                });
             }
 
-            if (!anyAdvanced && vehicles.Count > 0)
+            // Asegurar al menos 1 en descarga
+            var anyUnloading = fleet.Any(f => !f.IsScooptram && f.Status == STATUS_UNLOADING);
+            if (!anyUnloading && fleet.Any(f => !f.IsScooptram))
             {
-                _logger.LogWarning($"[RethinkBot] {vehicles.Count} vehículos en lista pero ninguno avanzó. Intervalo: {config.IntervalSeconds}s");
+                fleet.First(f => !f.IsScooptram).Status = STATUS_UNLOADING;
+            }
+
+            _fleet[config.ServerConfigId] = fleet;
+            _logHistoryService.AddLog(config.ServerConfigId, $"[RethinkBot] Flota inicializada: {selectedTrucks.Count} camiones + {numScoops} scooptrams.");
+        }
+
+        private async Task AdvanceFleet(RethinkBotConfig config, CancellationToken ct)
+        {
+            if (!_fleet.ContainsKey(config.ServerConfigId)) return;
+            var fleet = _fleet[config.ServerConfigId];
+            var random = new Random();
+            var baseUrl = $"https://{config.RethinkHost}:{config.RethinkPort}";
+
+            foreach (var sim in fleet)
+            {
+                if (sim.IsScooptram)
+                {
+                    // Scooptrams: mayormente cargando, a veces en tránsito, cambian sitio ocasionalmente
+                    if (random.Next(10) < 2) // 20% chance de cambiar a tránsito momentáneo
+                        sim.Status = STATUS_HAULING;
+                    else
+                        sim.Status = STATUS_LOADING;
+
+                    // 30% chance de cambiar sitio de carga
+                    if (random.Next(10) < 3)
+                    {
+                        using var scope = _scopeFactory.CreateScope();
+                        var db = scope.ServiceProvider.GetRequiredService<dbboot>();
+                        var routes = await db.Routes.Where(r => r.ServerConfigId == config.ServerConfigId && r.isEnabled).ToListAsync(ct);
+                        if (routes.Any()) sim.Route = routes[random.Next(routes.Count)];
+                    }
+                }
+                else
+                {
+                    // Volteos: avanzar status 3→5→7→9→3
+                    sim.Status = sim.Status switch
+                    {
+                        STATUS_LOADING => STATUS_HAULING,
+                        STATUS_HAULING => STATUS_UNLOADING,
+                        STATUS_UNLOADING => STATUS_RETURNING,
+                        STATUS_RETURNING => STATUS_LOADING,
+                        _ => STATUS_LOADING
+                    };
+
+                    // Al volver a LOADING, cambiar ruta
+                    if (sim.Status == STATUS_LOADING)
+                    {
+                        using var scope = _scopeFactory.CreateScope();
+                        var db = scope.ServiceProvider.GetRequiredService<dbboot>();
+                        var routes = await db.Routes.Where(r => r.ServerConfigId == config.ServerConfigId && r.isEnabled).ToListAsync(ct);
+                        if (routes.Any()) sim.Route = routes[random.Next(routes.Count)];
+                    }
+                }
+
+                // Insertar en RethinkDB
+                var doc = BuildDocument(sim);
+                await ExecuteReqlInsert(baseUrl, doc, config.ServerConfigId, ct);
+            }
+
+            // Garantizar al menos 1 en descarga
+            var trucks = fleet.Where(f => !f.IsScooptram).ToList();
+            if (trucks.Any() && !trucks.Any(t => t.Status == STATUS_UNLOADING))
+            {
+                var target = trucks[random.Next(trucks.Count)];
+                target.Status = STATUS_UNLOADING;
+                var doc = BuildDocument(target);
+                await ExecuteReqlInsert(baseUrl, doc, config.ServerConfigId, ct);
+            }
+
+            // Log del primer vehículo
+            var first = fleet.FirstOrDefault();
+            if (first != null)
+            {
+                var statusName = first.Status switch { STATUS_LOADING => "CARGANDO", STATUS_HAULING => "EN TRÁNSITO", STATUS_UNLOADING => "DESCARGANDO", STATUS_RETURNING => "REGRESANDO", _ => "IDLE" };
+                _logHistoryService.AddLog(config.ServerConfigId, $"[RethinkBot] {first.EconomicNumber} → {statusName} | {first.Route.description}");
             }
         }
 
-        // Tracking de conexiones HTTP (conn_id por servidor)
-        // Nota: cada request necesita su propio conn_id, no se reusan
-        private readonly Dictionary<int, string> _connIds = new();
+        private async Task MarkAllDeleted(RethinkBotConfig config, CancellationToken ct)
+        {
+            if (!_fleet.ContainsKey(config.ServerConfigId)) return;
+            var baseUrl = $"https://{config.RethinkHost}:{config.RethinkPort}";
 
-        private async Task<bool> ExecuteReqlHttp(string baseUrl, string documentJson, int serverId, CancellationToken ct)
+            foreach (var sim in _fleet[config.ServerConfigId])
+            {
+                var doc = JsonConvert.SerializeObject(new { VehicleId = sim.VehicleId, IsDeleted = true, Status = 0 });
+                await ExecuteReqlInsert(baseUrl, doc, config.ServerConfigId, ct);
+            }
+        }
+
+        private string BuildDocument(SimVehicle sim)
+        {
+            var loadDate = DateTime.UtcNow.AddMinutes(-new Random().Next(3, 20));
+            var doc = new Dictionary<string, object?>
+            {
+                ["VehicleId"] = sim.VehicleId,
+                ["VehicleEconomicNumber"] = sim.EconomicNumber,
+                ["VehicleCompanyId"] = sim.CompanyId,
+                ["VehicleCompanyName"] = sim.CompanyName,
+                ["VehicleTypeId"] = sim.VehicleTypeId,
+                ["VehicleTypeName"] = sim.VehicleTypeName,
+                ["EmployeeId"] = sim.EmployeeId,
+                ["EmployeeName"] = sim.EmployeeName,
+                ["EmployeeCompanyId"] = sim.EmployeeCompanyId,
+                ["EmployeeCompanyName"] = sim.EmployeeCompanyName,
+                ["LoadPointId"] = sim.Route.loadPointId,
+                ["LoadPointName"] = sim.Route.loadPointName,
+                ["UnLoadPointId"] = sim.IsScooptram ? null : (object)sim.Route.unLoadPointId,
+                ["UnLoadPointName"] = sim.IsScooptram ? null : sim.Route.unLoadPointName,
+                ["PathId"] = sim.Route.haulagePathId,
+                ["PathName"] = sim.Route.description,
+                ["MaterialId"] = sim.Route.materialTypeId ?? 0,
+                ["MaterialName"] = sim.Route.materialType ?? "MINERAL",
+                ["LoadDate"] = new Dictionary<string, object> { ["$reql_type$"] = "TIME", ["epoch_time"] = ((DateTimeOffset)loadDate).ToUnixTimeSeconds(), ["timezone"] = "-06:00" },
+                ["UnloadDate"] = null,
+                ["LoadEmployeeCompanyId"] = sim.EmployeeCompanyId,
+                ["LoadEmployeeCompanyName"] = sim.EmployeeCompanyName,
+                ["LoadEmployeeId"] = sim.EmployeeId,
+                ["LoadEmployeeName"] = sim.EmployeeName,
+                ["LoadVehicleId"] = sim.VehicleId,
+                ["LoadVehicleEconomicNumber"] = sim.EconomicNumber,
+                ["LoadVehicleCompanyId"] = sim.CompanyId,
+                ["LoadVehicleCompanyName"] = sim.CompanyName,
+                ["LoadVehicleTypeId"] = sim.VehicleTypeId,
+                ["LoadVehicleTypeName"] = sim.VehicleTypeName,
+                ["Status"] = sim.Status,
+                ["IsDeleted"] = false
+            };
+            return JsonConvert.SerializeObject(doc);
+        }
+
+        private async Task<bool> ExecuteReqlInsert(string baseUrl, string documentJson, int serverId, CancellationToken ct)
         {
             try
             {
-                // ReQL AST: r.db('SmartFlow').table('HaulageProcess').insert(document)
                 var dbAst = "[14,[\"SmartFlow\"]]";
                 var tableAst = "[15,[" + dbAst + ",\"HaulageProcess\"]]";
-                var globalOptions = "{\"binary_format\":\"raw\",\"time_format\":\"raw\",\"profile\":false}";
-                var reqlJson = "[1,[56,[" + tableAst + "," + documentJson + "]]," + globalOptions + "]";
+                var globalOpts = "{\"binary_format\":\"raw\",\"time_format\":\"raw\",\"profile\":false}";
+                var reql = "[1,[56,[" + tableAst + "," + documentJson + "]]," + globalOpts + "]";
 
-                // Paso 1: Obtener conn_id
+                // Obtener conn_id
                 var psi1 = new ProcessStartInfo
                 {
                     FileName = "/usr/bin/curl",
                     Arguments = $"-sk -X POST {baseUrl}/ajax/reql/open-new-connection",
-                    RedirectStandardOutput = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
+                    RedirectStandardOutput = true, UseShellExecute = false, CreateNoWindow = true
                 };
                 string connId;
-                using (var proc1 = Process.Start(psi1))
+                using (var p = Process.Start(psi1))
                 {
-                    if (proc1 == null) return false;
-                    connId = (await proc1.StandardOutput.ReadToEndAsync(ct)).Trim().Trim('"');
-                    await proc1.WaitForExitAsync(ct);
+                    if (p == null) return false;
+                    connId = (await p.StandardOutput.ReadToEndAsync(ct)).Trim().Trim('"');
+                    await p.WaitForExitAsync(ct);
                 }
+                if (string.IsNullOrWhiteSpace(connId)) return false;
 
-                if (string.IsNullOrWhiteSpace(connId))
-                {
-                    _logger.LogWarning("[RethinkBot] conn_id vacío");
-                    return false;
-                }
-
-                // Paso 2: Escribir payload binario directamente desde C# (8 bytes token LE int64 + JSON UTF8)
+                // Escribir payload binario
                 var tmpFile = $"/tmp/reql_{serverId}_{Thread.CurrentThread.ManagedThreadId}.bin";
-                var queryBytes = System.Text.Encoding.UTF8.GetBytes(reqlJson);
+                var queryBytes = Encoding.UTF8.GetBytes(reql);
                 var payload = new byte[8 + queryBytes.Length];
-                BitConverter.GetBytes((long)1).CopyTo(payload, 0); // token
+                BitConverter.GetBytes(1L).CopyTo(payload, 0);
                 queryBytes.CopyTo(payload, 8);
-                System.IO.File.WriteAllBytes(tmpFile, payload);
+                File.WriteAllBytes(tmpFile, payload);
 
-                // Paso 3: Enviar con curl (HTTP/1.1, sin -0)
+                // Enviar
                 var psi2 = new ProcessStartInfo
                 {
                     FileName = "/usr/bin/curl",
                     Arguments = $"-sk -X POST \"{baseUrl}/ajax/reql/?conn_id={connId}\" -H \"Content-Type: application/octet-stream\" --data-binary @{tmpFile}",
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
+                    RedirectStandardOutput = true, RedirectStandardError = true,
+                    UseShellExecute = false, CreateNoWindow = true
                 };
-                using (var proc2 = Process.Start(psi2))
+                using (var p = Process.Start(psi2))
                 {
-                    if (proc2 == null) return false;
-                    var output = await proc2.StandardOutput.ReadToEndAsync(ct);
-                    await proc2.WaitForExitAsync(ct);
-
-                    // Limpiar archivo temporal
-                    try { System.IO.File.Delete(tmpFile); } catch { }
-
-                    // La respuesta es binaria: 12 bytes header (8 token + 4 length) + JSON
-                    // Buscar "inserted" o "replaced" en la salida raw
-                    if (output.Contains("inserted") || output.Contains("replaced"))
-                        return true;
-
-                    // Si exit code 0 y no hay error, probablemente funcionó
-                    // (la respuesta binaria puede no tener el texto visible)
-                    if (proc2.ExitCode == 0 && output.Length > 12)
-                        return true;
-
-                    if (proc2.ExitCode != 0)
-                        _logger.LogWarning($"[RethinkBot] curl exit code: {proc2.ExitCode}");
+                    if (p == null) return false;
+                    await p.StandardOutput.ReadToEndAsync(ct);
+                    await p.WaitForExitAsync(ct);
+                    try { File.Delete(tmpFile); } catch { }
+                    return p.ExitCode == 0;
                 }
-
-                return false;
             }
-            catch (Exception ex)
+            catch { return false; }
+        }
+
+        private async Task<int> GetCurrentWorkshift(ServerConfig server, TokenService tokenService, CancellationToken ct)
+        {
+            try
             {
-                _logger.LogError(ex, "[RethinkBot] Error ejecutando query via curl");
-                return false;
+                var client = _httpClientFactory.CreateClient();
+                var token = await tokenService.GetTokenAsync(server.Id);
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                var host = server.ApiUrl.StartsWith("http") ? server.ApiUrl : $"https://{server.ApiUrl}";
+                var resp = await client.GetAsync($"{host}/Catalog/GetAllWorkShifts", ct);
+                if (!resp.IsSuccessStatusCode) return -1;
+                var json = await resp.Content.ReadAsStringAsync(ct);
+                var shifts = JsonConvert.DeserializeObject<List<ShiftDto>>(json);
+                if (shifts == null || !shifts.Any()) return -1;
+
+                var now = DateTime.UtcNow.AddHours(-6);
+                var t = now.TimeOfDay;
+                foreach (var s in shifts.Where(x => x.Enabled))
+                {
+                    var start = TimeSpan.Parse(s.StartTime);
+                    var end = TimeSpan.Parse(s.EndTime);
+                    if (start < end) { if (t >= start && t < end) return s.WorkShiftId; }
+                    else { if (t >= start || t < end) return s.WorkShiftId; }
+                }
+                return shifts.First().WorkShiftId;
             }
+            catch { return -1; }
         }
 
-        private static int GetNextStatus(int current)
-        {
-            return current switch
-            {
-                STATUS_LOADING => STATUS_HAULING,
-                STATUS_HAULING => STATUS_UNLOADING,
-                STATUS_UNLOADING => STATUS_RETURNING,
-                STATUS_RETURNING => STATUS_IDLE,
-                _ => STATUS_LOADING
-            };
-        }
-
-        private static string BuildDocumentJson(SimulatedVehicle sim)
-        {
-            var loadDate = DateTime.UtcNow.AddMinutes(-new Random().Next(5, 30));
-            var doc = new
-            {
-                VehicleId = sim.VehicleId,
-                VehicleEconomicNumber = sim.VehicleEconomicNumber,
-                VehicleCompanyId = sim.VehicleCompanyId,
-                VehicleCompanyName = sim.VehicleCompanyName,
-                VehicleTypeId = sim.VehicleTypeId,
-                VehicleTypeName = sim.VehicleTypeName,
-                EmployeeId = sim.EmployeeId,
-                EmployeeName = sim.EmployeeName,
-                EmployeeCompanyId = sim.EmployeeCompanyId,
-                EmployeeCompanyName = sim.EmployeeCompanyName,
-                LoadPointId = sim.Route.loadPointId,
-                LoadPointName = sim.Route.loadPointName,
-                UnLoadPointId = sim.Route.unLoadPointId,
-                UnLoadPointName = sim.Route.unLoadPointName,
-                PathId = sim.Route.haulagePathId,
-                PathName = sim.Route.description,
-                MaterialId = sim.Route.materialTypeId ?? 0,
-                MaterialName = sim.Route.materialType ?? "MINERAL",
-                LoadDate = new Dictionary<string, object> { ["$reql_type$"] = "TIME", ["epoch_time"] = ((DateTimeOffset)loadDate).ToUnixTimeSeconds(), ["timezone"] = "-06:00" },
-                UnloadDate = (object?)null,
-                LoadEmployeeId = sim.EmployeeId,
-                LoadEmployeeName = sim.EmployeeName,
-                LoadEmployeeCompanyId = sim.EmployeeCompanyId,
-                LoadEmployeeCompanyName = sim.EmployeeCompanyName,
-                LoadVehicleId = sim.LoadVehicleId,
-                LoadVehicleEconomicNumber = sim.LoadVehicleEconomicNumber,
-                LoadVehicleCompanyId = sim.LoadVehicleCompanyId,
-                LoadVehicleCompanyName = sim.LoadVehicleCompanyName,
-                LoadVehicleTypeId = sim.LoadVehicleTypeId,
-                LoadVehicleTypeName = sim.LoadVehicleTypeName,
-                Status = sim.CurrentStatus,
-                IsDeleted = false
-            };
-
-            return JsonConvert.SerializeObject(doc);
-        }
-
-        private class SimulatedVehicle
+        private class SimVehicle
         {
             public int VehicleId { get; set; }
-            public string VehicleEconomicNumber { get; set; } = "";
-            public int VehicleCompanyId { get; set; }
-            public string VehicleCompanyName { get; set; } = "";
+            public string EconomicNumber { get; set; } = "";
+            public int CompanyId { get; set; }
+            public string CompanyName { get; set; } = "";
             public int VehicleTypeId { get; set; }
             public string VehicleTypeName { get; set; } = "";
             public int EmployeeId { get; set; }
@@ -416,16 +397,16 @@ namespace haulages_bot.Services
             public int EmployeeCompanyId { get; set; }
             public string EmployeeCompanyName { get; set; } = "";
             public haulages_bot.Models.Route Route { get; set; } = null!;
-            public int CurrentStatus { get; set; }
-            public DateTime LastUpdate { get; set; }
-            public bool NeedsFirstUpdate { get; set; } = true;
-            // Scooptram (vehículo de carga)
-            public int LoadVehicleId { get; set; }
-            public string LoadVehicleEconomicNumber { get; set; } = "";
-            public int LoadVehicleCompanyId { get; set; }
-            public string LoadVehicleCompanyName { get; set; } = "";
-            public int LoadVehicleTypeId { get; set; }
-            public string LoadVehicleTypeName { get; set; } = "";
+            public int Status { get; set; }
+            public bool IsScooptram { get; set; }
+        }
+
+        private class ShiftDto
+        {
+            public int WorkShiftId { get; set; }
+            public string StartTime { get; set; } = "";
+            public string EndTime { get; set; } = "";
+            public bool Enabled { get; set; }
         }
     }
 }

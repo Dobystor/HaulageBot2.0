@@ -165,7 +165,7 @@ namespace haulages_bot.Controllers
             });
         }
 
-        /// <summary>Debug: probar add/productionplan sin plannedWorkId</summary>
+        /// <summary>Debug: probar add/productionplan con diferentes payloads</summary>
         [HttpPost("{serverId}/debug-addplan/{year}/{month}")]
         public async Task<IActionResult> DebugAddPlan(
             int serverId, int year, int month,
@@ -175,21 +175,13 @@ namespace haulages_bot.Controllers
             var server = await _dbContext.ServerConfigs.FindAsync(serverId);
             if (server == null) return BadRequest("Servidor no encontrado");
 
+            var host = server.ApiUrl.StartsWith("http") ? server.ApiUrl : $"https://{server.ApiUrl}";
+
+            // Obtener rutas del año
             var client = httpClientFactory.CreateClient();
             var token = await tokenService.GetTokenAsync(server.Id);
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-
-            var host = server.ApiUrl.StartsWith("http") ? server.ApiUrl : $"https://{server.ApiUrl}";
-
-            // Primero intentar GET workdays para obtener el plannedWorkId
-            var wdResp = await client.GetAsync($"{host}/service/haulages/api/v2/ProductionPlans/workdays/{year}/{month}");
-            var wdBody = await wdResp.Content.ReadAsStringAsync();
-
-            // Obtener primera ruta disponible del año
-            var client2 = httpClientFactory.CreateClient();
-            var token2 = await tokenService.GetTokenAsync(server.Id);
-            client2.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token2);
-            var plansResp = await client2.GetAsync($"{host}/service/haulages/api/v2/productionplans/plans/extraction/mineral/{year}");
+            var plansResp = await client.GetAsync($"{host}/service/haulages/api/v2/productionplans/plans/extraction/mineral/{year}");
             var plansBody = await plansResp.Content.ReadAsStringAsync();
             var plans = JsonConvert.DeserializeObject<List<PlanRouteDto>>(plansBody);
 
@@ -198,12 +190,24 @@ namespace haulages_bot.Controllers
 
             var route = plans[0];
 
+            // Intentar SIN el campo plannedWorkId en el JSON
+            var payloadWithoutWorkId = $"{{\"pathProductionPlanId\":{route.PathProductionPlanId},\"haulagePathId\":{route.HaulagePathId},\"distance\":{route.Distance},\"timeInSite\":{route.TimeInHour},\"tons\":5000,\"month\":{month},\"year\":{year},\"lawDetails\":[{{\"law\":100,\"oreName\":\"AG\",\"oreId\":1}}]}}";
+
+            var client2 = httpClientFactory.CreateClient();
+            var token2 = await tokenService.GetTokenAsync(server.Id);
+            client2.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token2);
+            var content = new StringContent(payloadWithoutWorkId, Encoding.UTF8, "application/json");
+
+            var url = $"{host}/service/haulages/api/v2/productionplans/add/productionplan";
+            var resp = await client2.PostAsync(url, content);
+            var respBody = await resp.Content.ReadAsStringAsync();
+
             return Ok(new
             {
-                workdaysGetUrl = $"{host}/service/haulages/api/v2/ProductionPlans/workdays/{year}/{month}",
-                workdaysGetStatus = (int)wdResp.StatusCode,
-                workdaysGetBody = string.IsNullOrEmpty(wdBody) ? "(vacío)" : wdBody.Length > 2000 ? wdBody.Substring(0, 2000) : wdBody,
-                firstRoute = new { route.PathProductionPlanId, route.HaulagePathId, route.HaulagePathName }
+                url,
+                sentPayload = payloadWithoutWorkId,
+                status = (int)resp.StatusCode,
+                responseBody = string.IsNullOrEmpty(respBody) ? "(vacío)" : respBody
             });
         }
 

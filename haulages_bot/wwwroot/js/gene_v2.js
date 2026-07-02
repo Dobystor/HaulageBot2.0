@@ -1048,6 +1048,25 @@ $(document).ready(function () {
         });
     });
 
+    // Limpiar datos de RethinkDB
+    $('#btnClearRethink').click(function() {
+        if (!confirm('¿Estás seguro? Esto eliminará TODOS los datos de la tabla HaulageProcess.')) return;
+        var btn = $(this);
+        btn.prop('disabled', true).css('opacity', '0.5');
+        $.ajax({
+            url: `/api/RethinkBot/${activeServerId}/clear`,
+            type: 'POST',
+            success: function(d) {
+                alert(d.message || 'Datos limpiados.');
+                btn.prop('disabled', false).css('opacity', '1');
+            },
+            error: function(xhr) {
+                alert('Error: ' + (xhr.responseJSON?.message || xhr.responseText));
+                btn.prop('disabled', false).css('opacity', '1');
+            }
+        });
+    });
+
     // Toggle rápido del switch
     $('#rethinkBotSwitch').change(function() {
         const isEnabled = $(this).is(':checked');

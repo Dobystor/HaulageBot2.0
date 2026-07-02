@@ -124,5 +124,74 @@ namespace haulages_bot.Controllers
                 lastLogTime = lastRethinkLog?.Timestamp
             });
         }
+
+        /// <summary>Limpiar toda la tabla HaulageProcess en RethinkDB</summary>
+        [HttpPost("{serverId}/clear")]
+        public async Task<IActionResult> ClearData(int serverId)
+        {
+            var config = await _dbContext.RethinkBotConfigs
+                .FirstOrDefaultAsync(c => c.ServerConfigId == serverId);
+
+            if (config == null || string.IsNullOrWhiteSpace(config.RethinkHost))
+                return BadRequest(new { message = "Configura el host de RethinkDB primero." });
+
+            var baseUrl = $"https://{config.RethinkHost}:{config.RethinkPort}";
+
+            try
+            {
+                // ReQL: r.db('SmartFlow').table('HaulageProcess').delete()
+                var reql = "[1,[54,[[15,[[14,[\"SmartFlow\"]],\"HaulageProcess\"]]]],{\"binary_format\":\"raw\",\"time_format\":\"raw\",\"profile\":false}]";
+
+                // Obtener conn_id
+                var psi1 = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "/usr/bin/curl",
+                    Arguments = $"-sk -X POST {baseUrl}/ajax/reql/open-new-connection",
+                    RedirectStandardOutput = true, UseShellExecute = false, CreateNoWindow = true
+                };
+                string connId;
+                using (var p = System.Diagnostics.Process.Start(psi1))
+                {
+                    if (p == null) return StatusCode(500, new { message = "No se pudo ejecutar curl" });
+                    connId = (await p.StandardOutput.ReadToEndAsync()).Trim().Trim('"');
+                    await p.WaitForExitAsync();
+                }
+
+                if (string.IsNullOrWhiteSpace(connId))
+                    return StatusCode(500, new { message = "No se pudo obtener conn_id" });
+
+                // Escribir payload
+                var tmpFile = $"/tmp/reql_clear_{serverId}.bin";
+                var queryBytes = System.Text.Encoding.UTF8.GetBytes(reql);
+                var payload = new byte[8 + queryBytes.Length];
+                System.BitConverter.GetBytes(1L).CopyTo(payload, 0);
+                queryBytes.CopyTo(payload, 8);
+                System.IO.File.WriteAllBytes(tmpFile, payload);
+
+                // Enviar
+                var psi2 = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "/usr/bin/curl",
+                    Arguments = $"-sk -X POST \"{baseUrl}/ajax/reql/?conn_id={connId}\" -H \"Content-Type: application/octet-stream\" --data-binary @{tmpFile}",
+                    RedirectStandardOutput = true, RedirectStandardError = true,
+                    UseShellExecute = false, CreateNoWindow = true
+                };
+                using (var p = System.Diagnostics.Process.Start(psi2))
+                {
+                    if (p != null)
+                    {
+                        await p.StandardOutput.ReadToEndAsync();
+                        await p.WaitForExitAsync();
+                    }
+                    try { System.IO.File.Delete(tmpFile); } catch { }
+                }
+
+                return Ok(new { message = "Tabla HaulageProcess limpiada." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error al limpiar", detail = ex.Message });
+            }
+        }
     }
 }

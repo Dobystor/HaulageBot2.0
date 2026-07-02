@@ -81,6 +81,7 @@ namespace haulages_bot.Services
                     // Inicializar flota si no existe
                     if (!_fleet.ContainsKey(config.ServerConfigId))
                     {
+                        _logger.LogWarning($"[RethinkBot] Fleet no existe, llamando InitFleet para server {config.ServerConfigId}");
                         await InitFleet(db, config, ct);
                     }
 
@@ -89,7 +90,7 @@ namespace haulages_bot.Services
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, $"[RethinkBot] Error server {config.ServerConfigId}");
+                    _logger.LogError($"[RethinkBot] Error server {config.ServerConfigId}: {ex.Message}");
                 }
             }
         }
@@ -290,6 +291,7 @@ namespace haulages_bot.Services
             var loadDate = DateTime.UtcNow.AddMinutes(-new Random().Next(3, 20));
             var doc = new Dictionary<string, object?>
             {
+                ["id"] = sim.VehicleId.ToString(),
                 ["VehicleId"] = sim.VehicleId,
                 ["VehicleEconomicNumber"] = sim.EconomicNumber,
                 ["VehicleCompanyId"] = sim.CompanyId,
@@ -333,7 +335,8 @@ namespace haulages_bot.Services
                 var dbAst = "[14,[\"SmartFlow\"]]";
                 var tableAst = "[15,[" + dbAst + ",\"HaulageProcess\"]]";
                 var globalOpts = "{\"binary_format\":\"raw\",\"time_format\":\"raw\",\"profile\":false}";
-                var reql = "[1,[56,[" + tableAst + "," + documentJson + "]]," + globalOpts + "]";
+                // ReQL AST: [QUERY_START, [INSERT, [table, doc], {conflict: replace}], {global_opts}]
+                var reql = "[1,[56,[" + tableAst + "," + documentJson + "],{\"conflict\":\"replace\"}]," + globalOpts + "]";
 
                 // Obtener conn_id
                 var psi1 = new ProcessStartInfo

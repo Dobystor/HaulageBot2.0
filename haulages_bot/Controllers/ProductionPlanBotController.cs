@@ -30,23 +30,7 @@ namespace haulages_bot.Controllers
         {
             var config = await _dbContext.ProductionPlanBotConfigs
                 .FirstOrDefaultAsync(c => c.ServerConfigId == serverId);
-
-            if (config == null)
-            {
-                return Ok(new ProductionPlanBotConfig
-                {
-                    ServerConfigId = serverId,
-                    TonnageMin = 3000,
-                    TonnageMax = 15000,
-                    LawMinGrTon = 50,
-                    LawMaxGrTon = 150,
-                    LawMinPercent = 0.5m,
-                    LawMaxPercent = 5,
-                    IsEnabled = false
-                });
-            }
-
-            return Ok(config);
+            return Ok(config ?? new ProductionPlanBotConfig { ServerConfigId = serverId });
         }
 
         [HttpPost("{serverId}")]
@@ -57,32 +41,21 @@ namespace haulages_bot.Controllers
 
             if (existing == null)
             {
-                var newConfig = new ProductionPlanBotConfig
-                {
-                    ServerConfigId = serverId,
-                    TonnageMin = input.TonnageMin,
-                    TonnageMax = input.TonnageMax,
-                    LawMinGrTon = input.LawMinGrTon,
-                    LawMaxGrTon = input.LawMaxGrTon,
-                    LawMinPercent = input.LawMinPercent,
-                    LawMaxPercent = input.LawMaxPercent,
-                    IsEnabled = input.IsEnabled
-                };
-                _dbContext.ProductionPlanBotConfigs.Add(newConfig);
-                await _dbContext.SaveChangesAsync();
-                return Ok(newConfig);
+                input.ServerConfigId = serverId;
+                _dbContext.ProductionPlanBotConfigs.Add(input);
             }
-
-            existing.TonnageMin = input.TonnageMin;
-            existing.TonnageMax = input.TonnageMax;
-            existing.LawMinGrTon = input.LawMinGrTon;
-            existing.LawMaxGrTon = input.LawMaxGrTon;
-            existing.LawMinPercent = input.LawMinPercent;
-            existing.LawMaxPercent = input.LawMaxPercent;
-            existing.IsEnabled = input.IsEnabled;
-
+            else
+            {
+                existing.TonnageMin = input.TonnageMin;
+                existing.TonnageMax = input.TonnageMax;
+                existing.LawMinGrTon = input.LawMinGrTon;
+                existing.LawMaxGrTon = input.LawMaxGrTon;
+                existing.LawMinPercent = input.LawMinPercent;
+                existing.LawMaxPercent = input.LawMaxPercent;
+                existing.IsEnabled = input.IsEnabled;
+            }
             await _dbContext.SaveChangesAsync();
-            return Ok(existing);
+            return Ok(existing ?? input);
         }
 
         [HttpPost("{serverId}/toggle")]
@@ -90,260 +63,137 @@ namespace haulages_bot.Controllers
         {
             var config = await _dbContext.ProductionPlanBotConfigs
                 .FirstOrDefaultAsync(c => c.ServerConfigId == serverId);
-
             if (config == null)
             {
                 config = new ProductionPlanBotConfig { ServerConfigId = serverId, IsEnabled = enabled };
                 _dbContext.ProductionPlanBotConfigs.Add(config);
-                await _dbContext.SaveChangesAsync();
-                return Ok(new { isEnabled = config.IsEnabled });
             }
-
-            config.IsEnabled = enabled;
+            else config.IsEnabled = enabled;
             await _dbContext.SaveChangesAsync();
             return Ok(new { isEnabled = config.IsEnabled });
         }
 
         [HttpGet("{serverId}/plans/{year}")]
-        public async Task<IActionResult> GetPlans(
-            int serverId, int year,
-            [FromServices] IHttpClientFactory httpClientFactory,
-            [FromServices] TokenService tokenService)
+        public async Task<IActionResult> GetPlans(int serverId, int year,
+            [FromServices] IHttpClientFactory httpClientFactory, [FromServices] TokenService tokenService)
         {
             var server = await _dbContext.ServerConfigs.FindAsync(serverId);
             if (server == null) return BadRequest("Servidor no encontrado");
-
-            var client = httpClientFactory.CreateClient();
-            var token = await tokenService.GetTokenAsync(server.Id);
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-
-            var host = server.ApiUrl.StartsWith("http") ? server.ApiUrl : $"https://{server.ApiUrl}";
-            var response = await client.GetAsync($"{host}/service/haulages/api/v2/productionplans/plans/extraction/mineral/{year}");
-            var body = await response.Content.ReadAsStringAsync();
-
-            if (!response.IsSuccessStatusCode)
-                return StatusCode((int)response.StatusCode, body);
-
+            var (client, host) = await CreateClient(server, httpClientFactory, tokenService);
+            var resp = await client.GetAsync($"{host}/service/haulages/api/v2/productionplans/plans/extraction/mineral/{year}");
+            var body = await resp.Content.ReadAsStringAsync();
             return Content(body, "application/json");
         }
 
-        /// <summary>Debug: probar add/workdays y ver qué responde</summary>
-        [HttpPost("{serverId}/debug-addworkdays/{year}/{month}")]
-        public async Task<IActionResult> DebugAddWorkdays(
-            int serverId, int year, int month,
-            [FromServices] IHttpClientFactory httpClientFactory,
-            [FromServices] TokenService tokenService)
-        {
-            var server = await _dbContext.ServerConfigs.FindAsync(serverId);
-            if (server == null) return BadRequest("Servidor no encontrado");
-
-            var client = httpClientFactory.CreateClient();
-            var token = await tokenService.GetTokenAsync(server.Id);
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-
-            var host = server.ApiUrl.StartsWith("http") ? server.ApiUrl : $"https://{server.ApiUrl}";
-
-            var daysInMonth = DateTime.DaysInMonth(year, month);
-            var days = Enumerable.Range(1, daysInMonth)
-                .Select(d => new DateTime(year, month, d).ToString("yyyy-MM-dd") + "T06:00:00.000Z")
-                .ToList();
-
-            var payload = new { year, month, days };
-            var json = JsonConvert.SerializeObject(payload);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-            var url = $"{host}/service/haulages/api/v2/ProductionPlans/add/workdays";
-            var response = await client.PostAsync(url, content);
-            var responseBody = await response.Content.ReadAsStringAsync();
-
-            return Ok(new
-            {
-                url,
-                status = (int)response.StatusCode,
-                responseHeaders = response.Headers.ToString(),
-                responseBody = string.IsNullOrEmpty(responseBody) ? "(vacío)" : responseBody
-            });
-        }
-
-        /// <summary>Debug: probar add/productionplan con diferentes payloads</summary>
-        [HttpPost("{serverId}/debug-addplan/{year}/{month}")]
-        public async Task<IActionResult> DebugAddPlan(
-            int serverId, int year, int month,
-            [FromServices] IHttpClientFactory httpClientFactory,
-            [FromServices] TokenService tokenService)
-        {
-            var server = await _dbContext.ServerConfigs.FindAsync(serverId);
-            if (server == null) return BadRequest("Servidor no encontrado");
-
-            var host = server.ApiUrl.StartsWith("http") ? server.ApiUrl : $"https://{server.ApiUrl}";
-
-            // Obtener rutas del año
-            var client = httpClientFactory.CreateClient();
-            var token = await tokenService.GetTokenAsync(server.Id);
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            var plansResp = await client.GetAsync($"{host}/service/haulages/api/v2/productionplans/plans/extraction/mineral/{year}");
-            var plansBody = await plansResp.Content.ReadAsStringAsync();
-            var plans = JsonConvert.DeserializeObject<List<PlanRouteDto>>(plansBody);
-
-            if (plans == null || !plans.Any())
-                return BadRequest(new { message = "No hay rutas para este año" });
-
-            var route = plans[0];
-
-            // Intentar SIN el campo plannedWorkId pero con month y year
-            var payloadObj = new
-            {
-                pathProductionPlanId = route.PathProductionPlanId,
-                haulagePathId = route.HaulagePathId,
-                distance = route.Distance,
-                timeInSite = route.TimeInHour,
-                tons = 5000,
-                month = month,
-                year = year,
-                lawDetails = new[] { new { law = 100, oreName = "AG", oreId = 1 } }
-            };
-
-            var client2 = httpClientFactory.CreateClient();
-            var token2 = await tokenService.GetTokenAsync(server.Id);
-            client2.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token2);
-            var payloadJson = JsonConvert.SerializeObject(payloadObj);
-            var content = new StringContent(payloadJson, Encoding.UTF8, "application/json");
-
-            var url = $"{host}/service/haulages/api/v2/productionplans/add/productionplan";
-            var resp = await client2.PostAsync(url, content);
-            var respBody = await resp.Content.ReadAsStringAsync();
-
-            return Ok(new
-            {
-                url,
-                sentPayload = payloadJson,
-                status = (int)resp.StatusCode,
-                responseBody = string.IsNullOrEmpty(respBody) ? "(vacío)" : respBody
-            });
-        }
-
         /// <summary>
-        /// Forzar actualización de planes para un mes.
-        /// Solo actualiza rutas que ya tengan plan para ese mes (usa productionPlanId existente).
+        /// Forzar generación de planes para un mes.
+        /// 1) Crear workdays si no existen
+        /// 2) Obtener plannedWorkId via allworkbyyear
+        /// 3) Para cada ruta: UPDATE si tiene plan, CREATE si no tiene
         /// </summary>
         [HttpPost("{serverId}/force/{year}/{month}")]
-        public async Task<IActionResult> ForceGenerate(
-            int serverId, int year, int month,
+        public async Task<IActionResult> ForceGenerate(int serverId, int year, int month,
             [FromServices] IHttpClientFactory httpClientFactory,
             [FromServices] TokenService tokenService,
             [FromServices] LogHistoryService logHistory)
         {
             var server = await _dbContext.ServerConfigs.FindAsync(serverId);
-            if (server == null)
-                return BadRequest(new { message = "Servidor no encontrado." });
+            if (server == null) return BadRequest(new { message = "Servidor no encontrado." });
 
-            var config = await _dbContext.ProductionPlanBotConfigs
-                .FirstOrDefaultAsync(c => c.ServerConfigId == serverId);
-
+            var config = await _dbContext.ProductionPlanBotConfigs.FirstOrDefaultAsync(c => c.ServerConfigId == serverId);
             var tonnageMin = config?.TonnageMin ?? 3000;
             var tonnageMax = config?.TonnageMax ?? 15000;
-            var lawMinGrTon = config?.LawMinGrTon ?? 50;
-            var lawMaxGrTon = config?.LawMaxGrTon ?? 150;
+            var lawMinGrTon = config?.LawMinGrTon ?? 50m;
+            var lawMaxGrTon = config?.LawMaxGrTon ?? 150m;
             var lawMinPercent = config?.LawMinPercent ?? 0.5m;
-            var lawMaxPercent = config?.LawMaxPercent ?? 5;
+            var lawMaxPercent = config?.LawMaxPercent ?? 5m;
 
             var host = server.ApiUrl.StartsWith("http") ? server.ApiUrl : $"https://{server.ApiUrl}";
             logHistory.AddLog(serverId, $"[ProductionPlanBot] Forzando planes para {year}/{month:D2}...");
 
             try
             {
-                // 1. GET planes existentes
-                var client = httpClientFactory.CreateClient();
-                var token = await tokenService.GetTokenAsync(server.Id);
-                if (token == null)
-                    return StatusCode(500, new { message = "Error interno", detail = "Token es null" });
+                // 1. Crear workdays (todos los días del mes)
+                var daysInMonth = DateTime.DaysInMonth(year, month);
+                var days = Enumerable.Range(1, daysInMonth)
+                    .Select(d => new DateTime(year, month, d).ToString("yyyy-MM-dd") + "T06:00:00.000Z").ToList();
 
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                var (wdClient, _) = await CreateClient(server, httpClientFactory, tokenService);
+                var wdJson = JsonConvert.SerializeObject(new { year, month, days });
+                await wdClient.PostAsync($"{host}/service/haulages/api/v2/ProductionPlans/add/workdays",
+                    new StringContent(wdJson, Encoding.UTF8, "application/json"));
 
-                var plansResp = await client.GetAsync($"{host}/service/haulages/api/v2/productionplans/plans/extraction/mineral/{year}");
-                var plansBody = await plansResp.Content.ReadAsStringAsync();
+                // 2. Obtener plannedWorkId
+                var (awClient, _2) = await CreateClient(server, httpClientFactory, tokenService);
+                var awResp = await awClient.GetAsync($"{host}/service/haulages/api/v2/productionplans/allworkbyyear/{year}");
+                var awBody = await awResp.Content.ReadAsStringAsync();
+                var allWorks = JsonConvert.DeserializeObject<List<WorkByYearDto>>(awBody);
+                var monthWork = allWorks?.FirstOrDefault(w => w.Month == month);
 
-                if (!plansResp.IsSuccessStatusCode)
+                if (monthWork == null || monthWork.PlannedWorkId <= 0)
                 {
-                    logHistory.AddLog(serverId, "[ProductionPlanBot] Error al obtener planes.", true);
-                    return StatusCode((int)plansResp.StatusCode, new { message = "Error al obtener planes" });
+                    logHistory.AddLog(serverId, "[ProductionPlanBot] No se encontró plannedWorkId.", true);
+                    return BadRequest(new { message = $"No se pudo obtener plannedWorkId para mes {month}." });
                 }
 
-                var plans = JsonConvert.DeserializeObject<List<PlanRouteDto>>(plansBody);
-                if (plans == null || !plans.Any())
-                    return BadRequest(new { message = "No se encontraron rutas de planes." });
+                int plannedWorkId = monthWork.PlannedWorkId;
 
-                // 2. Actualizar cada ruta que tenga plan para este mes
+                // 3. GET planes existentes
+                var (plClient, _3) = await CreateClient(server, httpClientFactory, tokenService);
+                var plResp = await plClient.GetAsync($"{host}/service/haulages/api/v2/productionplans/plans/extraction/mineral/{year}");
+                var plBody = await plResp.Content.ReadAsStringAsync();
+                var plans = JsonConvert.DeserializeObject<List<PlanRouteDto>>(plBody);
+
+                if (plans == null || !plans.Any())
+                    return BadRequest(new { message = "No hay rutas asignadas para este año." });
+
+                // 4. Crear o actualizar cada ruta
                 var random = new Random();
-                int updated = 0;
-                int skipped = 0;
+                int created = 0, updated = 0;
                 var errors = new List<string>();
 
-                var standardOres = new List<(int oreId, string name, string unit)>
-                {
-                    (1, "AG", "gr/tons"), (2, "PB", "%"), (3, "FE", "%"),
-                    (4, "AS", "%"), (5, "CU", "%"), (6, "ZN", "%"),
-                    (1352, "AU", "gr/tons"), (1353, "NI", "%")
+                var ores = new (int id, string name, string unit)[] {
+                    (1,"AG","gr/tons"),(2,"PB","%"),(3,"FE","%"),(4,"AS","%"),
+                    (5,"CU","%"),(6,"ZN","%"),(1352,"AU","gr/tons"),(1353,"NI","%")
                 };
 
                 foreach (var route in plans)
                 {
-                    if (route.Months == null || !route.Months.Any())
-                    {
-                        skipped++;
-                        continue;
-                    }
-
-                    var existingMonth = route.Months.Where(m => m != null).FirstOrDefault(m => m.Month == month);
-
-                    if (existingMonth == null || existingMonth.ProductionPlanId <= 0)
-                    {
-                        skipped++;
-                        continue;
-                    }
-
                     try
                     {
                         var tons = random.Next(tonnageMin, tonnageMax + 1);
-                        var lawDetails = standardOres.Select(ore =>
-                        {
-                            decimal law = ore.unit == "gr/tons"
+                        var lawDetails = ores.Select(o => (object)new {
+                            law = o.unit == "gr/tons"
                                 ? Math.Round((decimal)(random.NextDouble() * (double)(lawMaxGrTon - lawMinGrTon) + (double)lawMinGrTon), 2)
-                                : Math.Round((decimal)(random.NextDouble() * (double)(lawMaxPercent - lawMinPercent) + (double)lawMinPercent), 2);
-                            return (object)new { law, oreName = ore.name, oreId = ore.oreId };
+                                : Math.Round((decimal)(random.NextDouble() * (double)(lawMaxPercent - lawMinPercent) + (double)lawMinPercent), 2),
+                            oreName = o.name, oreId = o.id
                         }).ToList();
 
-                        var payload = new
+                        var existingMonth = route.Months?.Where(m => m != null).FirstOrDefault(m => m.Month == month);
+                        var (c, _4) = await CreateClient(server, httpClientFactory, tokenService);
+
+                        if (existingMonth != null && existingMonth.ProductionPlanId > 0)
                         {
-                            productionPlanId = existingMonth.ProductionPlanId,
-                            distance = route.Distance,
-                            timeInSite = route.TimeInHour,
-                            Tons = tons,
-                            lawDetails
-                        };
-
-                        var c = httpClientFactory.CreateClient();
-                        var t = await tokenService.GetTokenAsync(server.Id);
-                        c.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", t);
-
-                        var json = JsonConvert.SerializeObject(payload);
-                        var content = new StringContent(json, Encoding.UTF8, "application/json");
-                        var resp = await c.PutAsync($"{host}/service/haulages/api/v2/productionplans/update/productionplan", content);
-
-                        if (resp.IsSuccessStatusCode)
-                            updated++;
+                            var payload = new { productionPlanId = existingMonth.ProductionPlanId, distance = route.Distance, timeInSite = route.TimeInHour, Tons = tons, lawDetails };
+                            var resp = await c.PutAsync($"{host}/service/haulages/api/v2/productionplans/update/productionplan",
+                                new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json"));
+                            if (resp.IsSuccessStatusCode) updated++; else errors.Add($"{route.HaulagePathName}: UPDATE {resp.StatusCode}");
+                        }
                         else
-                            errors.Add($"{route.HaulagePathName}: {resp.StatusCode}");
+                        {
+                            var payload = new { pathProductionPlanId = route.PathProductionPlanId, haulagePathId = route.HaulagePathId, distance = route.Distance, timeInSite = route.TimeInHour, tons, plannedWorkId, lawDetails };
+                            var resp = await c.PostAsync($"{host}/service/haulages/api/v2/productionplans/add/productionplan",
+                                new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json"));
+                            if (resp.IsSuccessStatusCode) created++;
+                            else { var err = await resp.Content.ReadAsStringAsync(); errors.Add($"{route.HaulagePathName}: CREATE {resp.StatusCode} - {err}"); }
+                        }
                     }
-                    catch (Exception ex)
-                    {
-                        errors.Add($"{route.HaulagePathName}: {ex.Message}");
-                    }
+                    catch (Exception ex) { errors.Add($"{route.HaulagePathName}: {ex.Message}"); }
                 }
 
-                var msg = $"{updated} actualizados, {skipped} sin plan para mes {month}";
+                var msg = $"{created} creados, {updated} actualizados" + (errors.Any() ? $", {errors.Count} errores" : "");
                 logHistory.AddLog(serverId, $"[ProductionPlanBot] {msg}");
-                return Ok(new { message = msg, updated, skipped, totalRoutes = plans.Count, errors = errors.Any() ? errors : null });
+                return Ok(new { message = msg, created, updated, plannedWorkId, totalRoutes = plans.Count, errors = errors.Any() ? errors : null });
             }
             catch (Exception ex)
             {
@@ -352,46 +202,43 @@ namespace haulages_bot.Controllers
             }
         }
 
+        #region Helpers
+
+        private async Task<(HttpClient client, string host)> CreateClient(ServerConfig server, IHttpClientFactory factory, TokenService tokenService)
+        {
+            var client = factory.CreateClient();
+            var token = await tokenService.GetTokenAsync(server.Id);
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            var host = server.ApiUrl.StartsWith("http") ? server.ApiUrl : $"https://{server.ApiUrl}";
+            return (client, host);
+        }
+
+        #endregion
+
         #region DTOs
 
         private class PlanRouteDto
         {
-            [JsonProperty("pathProductionPlanId")]
-            public int PathProductionPlanId { get; set; }
-            [JsonProperty("haulagePathId")]
-            public int HaulagePathId { get; set; }
-            [JsonProperty("haulagePathName")]
-            public string? HaulagePathName { get; set; }
-            [JsonProperty("distance")]
-            public decimal Distance { get; set; }
-            [JsonProperty("timeInHour")]
-            public decimal TimeInHour { get; set; }
-            [JsonProperty("months")]
-            public List<PlanMonthDto>? Months { get; set; }
+            [JsonProperty("pathProductionPlanId")] public int PathProductionPlanId { get; set; }
+            [JsonProperty("haulagePathId")] public int HaulagePathId { get; set; }
+            [JsonProperty("haulagePathName")] public string? HaulagePathName { get; set; }
+            [JsonProperty("distance")] public decimal Distance { get; set; }
+            [JsonProperty("timeInHour")] public decimal TimeInHour { get; set; }
+            [JsonProperty("months")] public List<PlanMonthDto>? Months { get; set; }
         }
 
         private class PlanMonthDto
         {
-            [JsonProperty("productionPlanId")]
-            public int ProductionPlanId { get; set; }
-            [JsonProperty("month")]
-            public int Month { get; set; }
-            [JsonProperty("tons")]
-            public decimal Tons { get; set; }
-            [JsonProperty("minerals")]
-            public List<PlanMineralDto>? Minerals { get; set; }
+            [JsonProperty("productionPlanId")] public int ProductionPlanId { get; set; }
+            [JsonProperty("month")] public int Month { get; set; }
+            [JsonProperty("tons")] public decimal Tons { get; set; }
         }
 
-        private class PlanMineralDto
+        private class WorkByYearDto
         {
-            [JsonProperty("oreId")]
-            public int OreId { get; set; }
-            [JsonProperty("name")]
-            public string? Name { get; set; }
-            [JsonProperty("law")]
-            public decimal Law { get; set; }
-            [JsonProperty("unit")]
-            public string? Unit { get; set; }
+            [JsonProperty("plannedWorkId")] public int PlannedWorkId { get; set; }
+            [JsonProperty("month")] public int Month { get; set; }
+            [JsonProperty("year")] public int Year { get; set; }
         }
 
         #endregion

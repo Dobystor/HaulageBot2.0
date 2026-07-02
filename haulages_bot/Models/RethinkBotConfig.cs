@@ -28,6 +28,9 @@ namespace haulages_bot.Models
         /// <summary>Cantidad máxima de vehículos simultáneos en la simulación</summary>
         public int MaxSimultaneousVehicles { get; set; } = 5;
 
+        /// <summary>Cantidad de scooptrams adicionales en la simulación</summary>
+        public int ScooptramCount { get; set; } = 3;
+
         /// <summary>Si el bot está activo</summary>
         public bool IsEnabled { get; set; } = false;
     }

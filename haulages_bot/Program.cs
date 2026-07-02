@@ -124,6 +124,10 @@ using (var serviceProvider = builder.Services.BuildServiceProvider())
             {
                 dbContext.Database.ExecuteSqlRaw("ALTER TABLE RethinkBotConfigs ADD COLUMN RethinkPassword TEXT NOT NULL DEFAULT ''");
             } catch { /* ya existe */ }
+            try
+            {
+                dbContext.Database.ExecuteSqlRaw("ALTER TABLE RethinkBotConfigs ADD COLUMN ScooptramCount INTEGER NOT NULL DEFAULT 3");
+            } catch { /* ya existe */ }
 
             // Crear tabla InventoryBotConfigs si no existe
             try

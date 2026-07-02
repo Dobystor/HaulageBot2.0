@@ -180,6 +180,9 @@ $(document).ready(function () {
 
         // 5. Cargar config del bot de Inventarios
         loadInventoryBotConfig(serverId);
+
+        // 6. Cargar config del bot de Planes
+        loadPlansConfig(serverId);
     }
 
     // Cargar catálogos desde el backend y renderizar checkboxes
@@ -1236,6 +1239,139 @@ $(document).ready(function () {
             }
         }).fail(function() {});
     }, 15000);
+
+    // ========== PRODUCTION PLANS BOT HANDLERS ==========
+
+    var plansYear = new Date().getFullYear();
+    var plansMonth = new Date().getMonth() + 1;
+    var plansData = null;
+
+    var monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+    function updatePlansMonthLabel() {
+        $('#plansMonthLabel').text(monthNames[plansMonth - 1] + ' ' + plansYear);
+    }
+
+    function loadPlansData() {
+        if (!activeServerId) return;
+        $.get(`/api/ProductionPlanBot/${activeServerId}/plans/${plansYear}`, function(d) {
+            plansData = typeof d === 'string' ? JSON.parse(d) : d;
+            updatePlansInfo();
+        }).fail(function() {
+            $('#plansRouteCount').text('Error');
+            $('#plansTotalTons').text('--');
+        });
+    }
+
+    function updatePlansInfo() {
+        if (!plansData) { $('#plansRouteCount').text('--'); $('#plansTotalTons').text('--'); return; }
+        var count = 0;
+        var totalTons = 0;
+        plansData.forEach(function(route) {
+            if (!route.months) return;
+            var m = route.months.find(function(x) { return x && x.month === plansMonth; });
+            if (m && m.productionPlanId > 0) {
+                count++;
+                totalTons += m.tons || 0;
+            }
+        });
+        $('#plansRouteCount').text(count + ' de ' + plansData.length);
+        $('#plansTotalTons').text(totalTons.toLocaleString() + ' t');
+    }
+
+    function loadPlansConfig(serverId) {
+        $.getJSON(`/api/ProductionPlanBot/${serverId}`, function(config) {
+            $('#plansTonnageMin').val(config.tonnageMin || 3000);
+            $('#plansTonnageMax').val(config.tonnageMax || 15000);
+            $('#plansLawMinGrTon').val(config.lawMinGrTon || 50);
+            $('#plansLawMaxGrTon').val(config.lawMaxGrTon || 150);
+            $('#plansLawMinPercent').val(config.lawMinPercent || 0.5);
+            $('#plansLawMaxPercent').val(config.lawMaxPercent || 5);
+            $('#plansBotSwitch').prop('checked', config.isEnabled);
+        }).fail(function() {});
+        updatePlansMonthLabel();
+        loadPlansData();
+    }
+
+    $('#btnPlansPrevMonth').click(function() {
+        plansMonth--;
+        if (plansMonth < 1) { plansMonth = 12; plansYear--; }
+        updatePlansMonthLabel();
+        loadPlansData();
+    });
+
+    $('#btnPlansNextMonth').click(function() {
+        plansMonth++;
+        if (plansMonth > 12) { plansMonth = 1; plansYear++; }
+        updatePlansMonthLabel();
+        loadPlansData();
+    });
+
+    $('#btnSavePlansConfig').click(function() {
+        var payload = {
+            tonnageMin: parseInt($('#plansTonnageMin').val()) || 3000,
+            tonnageMax: parseInt($('#plansTonnageMax').val()) || 15000,
+            lawMinGrTon: parseFloat($('#plansLawMinGrTon').val()) || 50,
+            lawMaxGrTon: parseFloat($('#plansLawMaxGrTon').val()) || 150,
+            lawMinPercent: parseFloat($('#plansLawMinPercent').val()) || 0.5,
+            lawMaxPercent: parseFloat($('#plansLawMaxPercent').val()) || 5,
+            isEnabled: $('#plansBotSwitch').is(':checked')
+        };
+        $.ajax({
+            url: `/api/ProductionPlanBot/${activeServerId}`,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(payload),
+            success: function() { appendPlansLog('Configuración guardada.'); },
+            error: function() { appendPlansLog('Error al guardar.', true); }
+        });
+    });
+
+    $('#btnForcePlans').click(function() {
+        var btn = $(this);
+        btn.prop('disabled', true).css('opacity', '0.5');
+        appendPlansLog('Generando planes para ' + monthNames[plansMonth-1] + ' ' + plansYear + '...');
+
+        $.ajax({
+            url: `/api/ProductionPlanBot/${activeServerId}/force/${plansYear}/${plansMonth}`,
+            type: 'POST',
+            contentType: 'application/json',
+            success: function(data) {
+                appendPlansLog(data.message);
+                if (data.errors && data.errors.length > 0) {
+                    data.errors.forEach(function(e) { appendPlansLog('⚠ ' + e, true); });
+                }
+                loadPlansData();
+                btn.prop('disabled', false).css('opacity', '1');
+            },
+            error: function(xhr) {
+                var msg = xhr.responseJSON ? xhr.responseJSON.message || xhr.responseJSON.detail : 'Error desconocido';
+                appendPlansLog('Error: ' + msg, true);
+                btn.prop('disabled', false).css('opacity', '1');
+            }
+        });
+    });
+
+    $('#plansBotSwitch').change(function() {
+        var isEnabled = $(this).is(':checked');
+        $.ajax({
+            url: `/api/ProductionPlanBot/${activeServerId}/toggle`,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(isEnabled),
+            success: function() { appendPlansLog(isEnabled ? 'Bot activado' : 'Bot desactivado'); },
+            error: function() { $('#plansBotSwitch').prop('checked', !isEnabled); }
+        });
+    });
+
+    function appendPlansLog(message, isError) {
+        var container = $('#plansLogArea');
+        var now = new Date().toLocaleTimeString();
+        var color = isError ? 'color: var(--danger)' : 'color: var(--text-muted)';
+        container.find('.text-slate-600').first().remove();
+        container.append('<p style="' + color + '"><span class="text-slate-500">[' + now + ']</span> ' + message + '</p>');
+        container.scrollTop(container[0].scrollHeight);
+    }
 });
 
 // Función de ayuda global expuesta para abrir el modal

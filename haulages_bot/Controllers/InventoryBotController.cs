@@ -109,6 +109,45 @@ namespace haulages_bot.Controllers
             return Ok(new { isEnabled = config.IsEnabled });
         }
 
+        /// <summary>Diagnóstico: ver qué devuelve el API de sitios históricos y qué loadPoints se tienen</summary>
+        [HttpGet("{serverId}/debug")]
+        public async Task<IActionResult> Debug(
+            int serverId,
+            [FromServices] IHttpClientFactory httpClientFactory,
+            [FromServices] TokenService tokenService)
+        {
+            var server = await _dbContext.ServerConfigs.FindAsync(serverId);
+            if (server == null) return BadRequest("Servidor no encontrado");
+
+            // Obtener lo que devuelve historical/sites
+            var historicalSites = await GetHistoricalSites(server, tokenService, httpClientFactory);
+
+            // Obtener rutas de mineral
+            var dataConfig = await _dbContext.DataConfigurationLocal
+                .Where(dc => dc.ServerConfigId == serverId)
+                .OrderByDescending(dc => dc.Id)
+                .FirstOrDefaultAsync();
+
+            var selectedRouteIds = dataConfig != null
+                ? JsonConvert.DeserializeObject<List<int>>(dataConfig.SelectedRoutes) ?? new List<int>()
+                : new List<int>();
+
+            var mineralRoutes = await _dbContext.Routes
+                .Where(r => r.ServerConfigId == serverId
+                    && selectedRouteIds.Contains(r.haulagePathId)
+                    && r.selectedMaterialType == 0
+                    && r.isEnabled)
+                .Select(r => new { r.loadPointId, r.loadPointName })
+                .ToListAsync();
+
+            return Ok(new
+            {
+                historicalSitesCount = historicalSites?.Count ?? 0,
+                historicalSites = historicalSites,
+                mineralLoadPoints = mineralRoutes.GroupBy(r => r.loadPointId).Select(g => g.First()).ToList()
+            });
+        }
+
         /// <summary>Estado actual del bot con último log</summary>
         [HttpGet("{serverId}/status")]
         public async Task<IActionResult> GetStatus(int serverId, [FromServices] LogHistoryService logHistory)

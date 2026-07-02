@@ -137,6 +137,23 @@ using (var serviceProvider = builder.Services.BuildServiceProvider())
                     )");
             } catch { /* ya existe */ }
 
+            // Crear tabla ProductionPlanBotConfigs si no existe
+            try
+            {
+                dbContext.Database.ExecuteSqlRaw(@"
+                    CREATE TABLE IF NOT EXISTS ProductionPlanBotConfigs (
+                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        ServerConfigId INTEGER NOT NULL,
+                        TonnageMin INTEGER NOT NULL DEFAULT 3000,
+                        TonnageMax INTEGER NOT NULL DEFAULT 15000,
+                        LawMinGrTon REAL NOT NULL DEFAULT 50,
+                        LawMaxGrTon REAL NOT NULL DEFAULT 150,
+                        LawMinPercent REAL NOT NULL DEFAULT 0.5,
+                        LawMaxPercent REAL NOT NULL DEFAULT 5,
+                        IsEnabled INTEGER NOT NULL DEFAULT 0
+                    )");
+            } catch { /* ya existe */ }
+
             if (!dbContext.DataConfigurationLocal.Any())
             {
                 Console.WriteLine("Insertando datos iniciales...");

@@ -666,14 +666,12 @@ $(document).ready(function () {
                     materialBadge = `<span class="text-slate-500">-</span>`;
                 }
 
-                // Aplicar offset de zona horaria a la fecha del acarreo
+                // Mostrar fecha tal cual (ya viene en hora local)
                 let dateDisplay = item.dateofcarries || '';
                 try {
                     const rawDate = new Date(item.dateofcarries);
                     if (!isNaN(rawDate.getTime())) {
-                        const tzFn = window.applyTimezoneOffset;
-                        const adjustedDate = tzFn ? tzFn(rawDate) : rawDate;
-                        dateDisplay = adjustedDate.toLocaleString('es-MX', {
+                        dateDisplay = rawDate.toLocaleString('es-MX', {
                             year: 'numeric', month: '2-digit', day: '2-digit',
                             hour: '2-digit', minute: '2-digit', second: '2-digit',
                             hour12: false

@@ -300,14 +300,12 @@ namespace haulages_bot.Services
                 }
 
                 // Paso 2: Escribir payload binario directamente desde C# (8 bytes token LE int64 + JSON UTF8)
-                var tmpFile = $"/tmp/reql_{serverId}_{Environment.CurrentManagedThreadId}.bin";
+                var tmpFile = $"/tmp/reql_{serverId}_{Thread.CurrentThread.ManagedThreadId}.bin";
                 var queryBytes = System.Text.Encoding.UTF8.GetBytes(reqlJson);
-                using (var fs = new FileStream(tmpFile, FileMode.Create))
-                {
-                    var tokenBytes = BitConverter.GetBytes((long)1); // little-endian int64
-                    await fs.WriteAsync(tokenBytes, 0, 8, ct);
-                    await fs.WriteAsync(queryBytes, 0, queryBytes.Length, ct);
-                }
+                var payload = new byte[8 + queryBytes.Length];
+                BitConverter.GetBytes((long)1).CopyTo(payload, 0); // token
+                queryBytes.CopyTo(payload, 8);
+                System.IO.File.WriteAllBytes(tmpFile, payload);
 
                 // Paso 3: Enviar con curl (HTTP/1.1, sin -0)
                 var psi2 = new ProcessStartInfo

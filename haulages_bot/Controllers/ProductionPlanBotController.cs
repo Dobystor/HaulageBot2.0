@@ -190,13 +190,24 @@ namespace haulages_bot.Controllers
 
             var route = plans[0];
 
-            // Intentar SIN el campo plannedWorkId en el JSON
-            var payloadWithoutWorkId = $"{{\"pathProductionPlanId\":{route.PathProductionPlanId},\"haulagePathId\":{route.HaulagePathId},\"distance\":{route.Distance},\"timeInSite\":{route.TimeInHour},\"tons\":5000,\"month\":{month},\"year\":{year},\"lawDetails\":[{{\"law\":100,\"oreName\":\"AG\",\"oreId\":1}}]}}";
+            // Intentar SIN el campo plannedWorkId pero con month y year
+            var payloadObj = new
+            {
+                pathProductionPlanId = route.PathProductionPlanId,
+                haulagePathId = route.HaulagePathId,
+                distance = route.Distance,
+                timeInSite = route.TimeInHour,
+                tons = 5000,
+                month = month,
+                year = year,
+                lawDetails = new[] { new { law = 100, oreName = "AG", oreId = 1 } }
+            };
 
             var client2 = httpClientFactory.CreateClient();
             var token2 = await tokenService.GetTokenAsync(server.Id);
             client2.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token2);
-            var content = new StringContent(payloadWithoutWorkId, Encoding.UTF8, "application/json");
+            var payloadJson = JsonConvert.SerializeObject(payloadObj);
+            var content = new StringContent(payloadJson, Encoding.UTF8, "application/json");
 
             var url = $"{host}/service/haulages/api/v2/productionplans/add/productionplan";
             var resp = await client2.PostAsync(url, content);
@@ -205,7 +216,7 @@ namespace haulages_bot.Controllers
             return Ok(new
             {
                 url,
-                sentPayload = payloadWithoutWorkId,
+                sentPayload = payloadJson,
                 status = (int)resp.StatusCode,
                 responseBody = string.IsNullOrEmpty(respBody) ? "(vacío)" : respBody
             });

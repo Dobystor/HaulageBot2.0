@@ -28,7 +28,6 @@ namespace haulages_bot.Services
         private const int STATUS_LOADING = 3;
         private const int STATUS_HAULING = 5;
         private const int STATUS_UNLOADING = 7;
-        private const int STATUS_RETURNING = 9;
 
         private readonly Dictionary<int, List<SimVehicle>> _fleet = new();
         private int _lastWorkshiftId = -1;
@@ -137,7 +136,7 @@ namespace haulages_bot.Services
                     VehicleTypeId = v.VehicleTypeId, VehicleTypeName = vType?.Name ?? "DUMP TRUCKS (HAULING) (VOLQUETE)",
                     EmployeeId = emp.EmployeeId, EmployeeName = emp.FullName,
                     EmployeeCompanyId = emp.CompanyId, EmployeeCompanyName = empCompany?.Name ?? "LASEC",
-                    Route = route, Status = STATUS_LOADING + (random.Next(4) * 2), // Random initial status
+                    Route = route, Status = STATUS_LOADING + (random.Next(3) * 2), // Random initial status 3, 5, or 7
                     IsScooptram = false
                 });
             }
@@ -224,13 +223,12 @@ namespace haulages_bot.Services
                 }
                 else
                 {
-                    // Volteos: avanzar status 3→5→7→9→3
+                    // Volteos: avanzar status 3→5→7→3
                     sim.Status = sim.Status switch
                     {
                         STATUS_LOADING => STATUS_HAULING,
                         STATUS_HAULING => STATUS_UNLOADING,
-                        STATUS_UNLOADING => STATUS_RETURNING,
-                        STATUS_RETURNING => STATUS_LOADING,
+                        STATUS_UNLOADING => STATUS_LOADING,
                         _ => STATUS_LOADING
                     };
 
@@ -265,7 +263,7 @@ namespace haulages_bot.Services
             var first = fleet.FirstOrDefault();
             if (first != null)
             {
-                var statusName = first.Status switch { STATUS_LOADING => "CARGANDO", STATUS_HAULING => "EN TRÁNSITO", STATUS_UNLOADING => "DESCARGANDO", STATUS_RETURNING => "REGRESANDO", _ => "IDLE" };
+                var statusName = first.Status switch { STATUS_LOADING => "CARGANDO", STATUS_HAULING => "EN TRÁNSITO", STATUS_UNLOADING => "DESCARGANDO", _ => "IDLE" };
                 _logHistoryService.AddLog(config.ServerConfigId, $"[RethinkBot] {first.EconomicNumber} → {statusName} | {first.Route.description}");
             }
         }
@@ -431,24 +429,24 @@ namespace haulages_bot.Services
 
         private class ApiVehicleDto
         {
-            [JsonProperty("vehicleId")] public int VehicleId { get; set; }
-            [JsonProperty("economicNumber")] public string? EconomicNumber { get; set; }
-            [JsonProperty("companyId")] public int CompanyId { get; set; }
-            [JsonProperty("vehicleTypeId")] public int VehicleTypeId { get; set; }
+            [JsonProperty("VehicleId")] public int VehicleId { get; set; }
+            [JsonProperty("EconomicNumber")] public string? EconomicNumber { get; set; }
+            [JsonProperty("CompanyId")] public int CompanyId { get; set; }
+            [JsonProperty("VehicleTypeId")] public int VehicleTypeId { get; set; }
             public string? CompanyName => Company?.Name;
             public string? VehicleTypeName => VehicleType?.Name;
-            [JsonProperty("company")] public ApiCompanyDto? Company { get; set; }
-            [JsonProperty("vehicleType")] public ApiVehicleTypeDto? VehicleType { get; set; }
+            [JsonProperty("Company")] public ApiCompanyDto? Company { get; set; }
+            [JsonProperty("VehicleType")] public ApiVehicleTypeDto? VehicleType { get; set; }
         }
 
         private class ApiCompanyDto
         {
-            [JsonProperty("name")] public string? Name { get; set; }
+            [JsonProperty("Name")] public string? Name { get; set; }
         }
 
         private class ApiVehicleTypeDto
         {
-            [JsonProperty("name")] public string? Name { get; set; }
+            [JsonProperty("Name")] public string? Name { get; set; }
         }
     }
 }

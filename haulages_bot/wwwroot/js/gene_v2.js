@@ -1176,6 +1176,28 @@ $(document).ready(function () {
         });
     });
 
+    // Forzar actualización manual de inventarios
+    $('#btnForceInventory').click(function() {
+        const btn = $(this);
+        btn.prop('disabled', true).css('opacity', '0.5');
+        appendInventoryLog('Forzando actualización de inventarios...');
+
+        $.ajax({
+            url: `/api/InventoryBot/${activeServerId}/force`,
+            type: 'POST',
+            contentType: 'application/json',
+            success: function(data) {
+                appendInventoryLog(data.message || `${data.updated} sitios actualizados.`);
+                btn.prop('disabled', false).css('opacity', '1');
+            },
+            error: function(xhr) {
+                const msg = xhr.responseJSON?.message || xhr.responseText || 'Error desconocido';
+                appendInventoryLog('Error: ' + msg, true);
+                btn.prop('disabled', false).css('opacity', '1');
+            }
+        });
+    });
+
     // Log helper para Inventarios
     function appendInventoryLog(message, isError) {
         const container = $('#inventoryLogArea');

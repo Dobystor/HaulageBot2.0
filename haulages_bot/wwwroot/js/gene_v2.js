@@ -9,7 +9,7 @@ $(document).ready(function () {
     // Inicializar Flatpickr en los campos de fecha del generador masivo
     const fpConfig = {
         enableTime: true,
-        dateFormat: "Y-m-d H:i:S",  // Enviar hora local sin timezone
+        dateFormat: "Y-m-dTH:i:00",  // ISO sin timezone: 2026-07-02T09:10:00
         altInput: true,             // Mostrar formato amigable al usuario
         altFormat: "d/m/Y H:i",    // Formato visual: dd/mm/yyyy HH:mm
         altInputClass: "w-full cyber-input px-3 py-2 pl-10 rounded", // Forzar clases completas con padding-left pl-10

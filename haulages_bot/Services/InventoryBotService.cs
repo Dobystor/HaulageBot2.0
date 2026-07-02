@@ -122,29 +122,19 @@ namespace haulages_bot.Services
                 return;
             }
 
-            // Hacer match entre loadPointNames y historicalSites por 'place'
+            // Actualizar TODOS los sitios de inventario con nuevos valores aleatorios
             var random = new Random();
             var updates = new List<object>();
 
             foreach (var site in historicalSites)
             {
-                var place = site.Place ?? "";
-                if (loadPointNames.Any(lp => lp.Contains(place) || place.Contains(lp)))
+                var tons = random.Next(config.TonnageMin, config.TonnageMax + 1);
+                updates.Add(new
                 {
-                    var tons = random.Next(config.TonnageMin, config.TonnageMax + 1);
-                    updates.Add(new
-                    {
-                        tons = tons,
-                        isConfirmedOre = true,
-                        oreInventoryHistoricalId = site.OreInventoryHistoricalId
-                    });
-                }
-            }
-
-            if (!updates.Any())
-            {
-                _logHistoryService.AddLog(config.ServerConfigId, "[InventoryBot] No hubo match entre rutas de mineral y sitios de inventario.");
-                return;
+                    tons = tons,
+                    isConfirmedOre = true,
+                    oreInventoryHistoricalId = site.OreInventoryHistoricalId
+                });
             }
 
             // Enviar actualización

@@ -195,29 +195,19 @@ namespace haulages_bot.Controllers
                 return BadRequest(new { message = "No se pudieron obtener sitios de inventario histórico del servidor." });
             }
 
-            // Hacer match y generar nuevos valores aleatorios
+            // Actualizar TODOS los sitios de inventario con nuevos valores aleatorios
             var random = new Random();
             var updates = new List<object>();
 
             foreach (var site in historicalSites)
             {
-                var place = site.Place ?? "";
-                if (loadPointNames.Any(lp => lp.Contains(place) || place.Contains(lp)))
+                var tons = random.Next(tonnageMin, tonnageMax + 1);
+                updates.Add(new
                 {
-                    var tons = random.Next(tonnageMin, tonnageMax + 1);
-                    updates.Add(new
-                    {
-                        tons = tons,
-                        isConfirmedOre = true,
-                        oreInventoryHistoricalId = site.OreInventoryHistoricalId
-                    });
-                }
-            }
-
-            if (!updates.Any())
-            {
-                logHistory.AddLog(serverId, "[InventoryBot] No hubo match entre rutas de mineral y sitios de inventario.");
-                return Ok(new { message = "No hubo match entre rutas de mineral y sitios de inventario.", updated = 0 });
+                    tons = tons,
+                    isConfirmedOre = true,
+                    oreInventoryHistoricalId = site.OreInventoryHistoricalId
+                });
             }
 
             // Enviar actualización (reemplaza los existentes con nuevos valores)

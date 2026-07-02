@@ -181,8 +181,15 @@ namespace haulages_bot.Controllers
 
             var host = server.ApiUrl.StartsWith("http") ? server.ApiUrl : $"https://{server.ApiUrl}";
 
+            // Primero intentar GET workdays para obtener el plannedWorkId
+            var wdResp = await client.GetAsync($"{host}/service/haulages/api/v2/ProductionPlans/workdays/{year}/{month}");
+            var wdBody = await wdResp.Content.ReadAsStringAsync();
+
             // Obtener primera ruta disponible del año
-            var plansResp = await client.GetAsync($"{host}/service/haulages/api/v2/productionplans/plans/extraction/mineral/{year}");
+            var client2 = httpClientFactory.CreateClient();
+            var token2 = await tokenService.GetTokenAsync(server.Id);
+            client2.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token2);
+            var plansResp = await client2.GetAsync($"{host}/service/haulages/api/v2/productionplans/plans/extraction/mineral/{year}");
             var plansBody = await plansResp.Content.ReadAsStringAsync();
             var plans = JsonConvert.DeserializeObject<List<PlanRouteDto>>(plansBody);
 
@@ -191,31 +198,12 @@ namespace haulages_bot.Controllers
 
             var route = plans[0];
 
-            // Probar sin plannedWorkId y con plannedWorkId 0
-            var payload = new
-            {
-                pathProductionPlanId = route.PathProductionPlanId,
-                haulagePathId = route.HaulagePathId,
-                distance = route.Distance,
-                timeInSite = route.TimeInHour,
-                tons = 5000,
-                plannedWorkId = 0,
-                lawDetails = new[] { new { law = 100, oreName = "AG", oreId = 1 } }
-            };
-
-            var json = JsonConvert.SerializeObject(payload);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-            var url = $"{host}/service/haulages/api/v2/productionplans/add/productionplan";
-            var response = await client.PostAsync(url, content);
-            var responseBody = await response.Content.ReadAsStringAsync();
-
             return Ok(new
             {
-                url,
-                sentPayload = payload,
-                status = (int)response.StatusCode,
-                responseBody = string.IsNullOrEmpty(responseBody) ? "(vacío)" : responseBody
+                workdaysGetUrl = $"{host}/service/haulages/api/v2/ProductionPlans/workdays/{year}/{month}",
+                workdaysGetStatus = (int)wdResp.StatusCode,
+                workdaysGetBody = string.IsNullOrEmpty(wdBody) ? "(vacío)" : wdBody.Length > 2000 ? wdBody.Substring(0, 2000) : wdBody,
+                firstRoute = new { route.PathProductionPlanId, route.HaulagePathId, route.HaulagePathName }
             });
         }
 

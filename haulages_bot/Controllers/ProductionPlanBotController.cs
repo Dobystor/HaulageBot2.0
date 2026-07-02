@@ -165,6 +165,60 @@ namespace haulages_bot.Controllers
             });
         }
 
+        /// <summary>Debug: probar add/productionplan sin plannedWorkId</summary>
+        [HttpPost("{serverId}/debug-addplan/{year}/{month}")]
+        public async Task<IActionResult> DebugAddPlan(
+            int serverId, int year, int month,
+            [FromServices] IHttpClientFactory httpClientFactory,
+            [FromServices] TokenService tokenService)
+        {
+            var server = await _dbContext.ServerConfigs.FindAsync(serverId);
+            if (server == null) return BadRequest("Servidor no encontrado");
+
+            var client = httpClientFactory.CreateClient();
+            var token = await tokenService.GetTokenAsync(server.Id);
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            var host = server.ApiUrl.StartsWith("http") ? server.ApiUrl : $"https://{server.ApiUrl}";
+
+            // Obtener primera ruta disponible del año
+            var plansResp = await client.GetAsync($"{host}/service/haulages/api/v2/productionplans/plans/extraction/mineral/{year}");
+            var plansBody = await plansResp.Content.ReadAsStringAsync();
+            var plans = JsonConvert.DeserializeObject<List<PlanRouteDto>>(plansBody);
+
+            if (plans == null || !plans.Any())
+                return BadRequest(new { message = "No hay rutas para este año" });
+
+            var route = plans[0];
+
+            // Probar sin plannedWorkId y con plannedWorkId 0
+            var payload = new
+            {
+                pathProductionPlanId = route.PathProductionPlanId,
+                haulagePathId = route.HaulagePathId,
+                distance = route.Distance,
+                timeInSite = route.TimeInHour,
+                tons = 5000,
+                plannedWorkId = 0,
+                lawDetails = new[] { new { law = 100, oreName = "AG", oreId = 1 } }
+            };
+
+            var json = JsonConvert.SerializeObject(payload);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var url = $"{host}/service/haulages/api/v2/productionplans/add/productionplan";
+            var response = await client.PostAsync(url, content);
+            var responseBody = await response.Content.ReadAsStringAsync();
+
+            return Ok(new
+            {
+                url,
+                sentPayload = payload,
+                status = (int)response.StatusCode,
+                responseBody = string.IsNullOrEmpty(responseBody) ? "(vacío)" : responseBody
+            });
+        }
+
         /// <summary>
         /// Forzar actualización de planes para un mes.
         /// Solo actualiza rutas que ya tengan plan para ese mes (usa productionPlanId existente).

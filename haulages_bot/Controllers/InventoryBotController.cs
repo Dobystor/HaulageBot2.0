@@ -206,22 +206,26 @@ namespace haulages_bot.Controllers
             // 3. Agregar nuevos sitios con tonelaje aleatorio
             var random = new Random();
             int added = 0;
+            var errors = new List<string>();
             foreach (var lp in loadPoints)
             {
                 var tons = random.Next(tonnageMin, tonnageMax + 1);
-                var ok = await AddSite(server, tokenService, httpClientFactory, lp.loadPointId, lp.loadPointName, tons);
-                if (ok) added++;
+                var (ok, responseBody) = await AddSite(server, tokenService, httpClientFactory, lp.loadPointId, lp.loadPointName, tons);
+                if (ok)
+                    added++;
+                else
+                    errors.Add($"placeId={lp.loadPointId} ({lp.loadPointName}): {responseBody}");
             }
 
             if (added > 0)
             {
                 logHistory.AddLog(serverId, $"[InventoryBot] (Manual) {added} sitios nuevos agregados exitosamente.");
-                return Ok(new { message = $"{removed} eliminados, {added} nuevos agregados.", removed, added });
+                return Ok(new { message = $"{removed} eliminados, {added} nuevos agregados.", removed, added, errors });
             }
             else
             {
                 logHistory.AddLog(serverId, "[InventoryBot] Error al agregar sitios nuevos.", true);
-                return StatusCode(500, new { message = "Error al agregar sitios de inventario." });
+                return StatusCode(500, new { message = "Error al agregar sitios de inventario.", errors });
             }
         }
 
@@ -267,7 +271,7 @@ namespace haulages_bot.Controllers
             }
         }
 
-        private async Task<bool> AddSite(ServerConfig server, TokenService tokenService, IHttpClientFactory httpClientFactory, int placeId, string placeName, int tons)
+        private async Task<(bool success, string? responseBody)> AddSite(ServerConfig server, TokenService tokenService, IHttpClientFactory httpClientFactory, int placeId, string placeName, int tons)
         {
             try
             {
@@ -287,11 +291,12 @@ namespace haulages_bot.Controllers
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
                 var response = await client.PostAsync($"{host}/service/haulages/api/v2/Inventory/sites/add", content);
-                return response.IsSuccessStatusCode;
+                var body = await response.Content.ReadAsStringAsync();
+                return (response.IsSuccessStatusCode, body);
             }
-            catch
+            catch (Exception ex)
             {
-                return false;
+                return (false, ex.Message);
             }
         }
 

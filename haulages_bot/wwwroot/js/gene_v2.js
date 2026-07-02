@@ -1187,12 +1187,19 @@ $(document).ready(function () {
             type: 'POST',
             contentType: 'application/json',
             success: function(data) {
-                appendInventoryLog(data.message || `${data.updated} sitios actualizados.`);
+                appendInventoryLog(data.message || `${data.added} sitios agregados.`);
+                if (data.errors && data.errors.length > 0) {
+                    data.errors.forEach(function(err) { appendInventoryLog('⚠ ' + err, true); });
+                }
                 btn.prop('disabled', false).css('opacity', '1');
             },
             error: function(xhr) {
-                const msg = xhr.responseJSON?.message || xhr.responseText || 'Error desconocido';
+                var resp = xhr.responseJSON;
+                var msg = resp?.message || xhr.responseText || 'Error desconocido';
                 appendInventoryLog('Error: ' + msg, true);
+                if (resp?.errors && resp.errors.length > 0) {
+                    resp.errors.forEach(function(err) { appendInventoryLog('  → ' + err, true); });
+                }
                 btn.prop('disabled', false).css('opacity', '1');
             }
         });

@@ -10,66 +10,33 @@ namespace haulages_bot.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<int>(
-                name: "TimezoneOffsetHours",
-                table: "ServerConfigs",
-                type: "INTEGER",
-                nullable: true);
+            // Usar SQL raw para ser idempotente en SQLite (las tablas/columnas pueden existir
+            // por migraciones manuales con ExecuteSqlRaw en Program.cs)
 
-            migrationBuilder.AddColumn<string>(
-                name: "EmployeeFullName",
-                table: "Haulages",
-                type: "TEXT",
-                nullable: true);
+            // Tabla InventoryBotConfigs
+            migrationBuilder.Sql(@"
+                CREATE TABLE IF NOT EXISTS InventoryBotConfigs (
+                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ServerConfigId INTEGER NOT NULL,
+                    TonnageMin INTEGER NOT NULL DEFAULT 200,
+                    TonnageMax INTEGER NOT NULL DEFAULT 800,
+                    SitesMin INTEGER NOT NULL DEFAULT 2,
+                    SitesMax INTEGER NOT NULL DEFAULT 5,
+                    IsEnabled INTEGER NOT NULL DEFAULT 0
+                )");
 
-            migrationBuilder.AddColumn<string>(
-                name: "RouteDescription",
-                table: "Haulages",
-                type: "TEXT",
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "VehicleEconomicNumber",
-                table: "Haulages",
-                type: "TEXT",
-                nullable: true);
-
-            migrationBuilder.CreateTable(
-                name: "InventoryBotConfigs",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    ServerConfigId = table.Column<int>(type: "INTEGER", nullable: false),
-                    TonnageMin = table.Column<int>(type: "INTEGER", nullable: false),
-                    TonnageMax = table.Column<int>(type: "INTEGER", nullable: false),
-                    SitesMin = table.Column<int>(type: "INTEGER", nullable: false),
-                    SitesMax = table.Column<int>(type: "INTEGER", nullable: false),
-                    IsEnabled = table.Column<bool>(type: "INTEGER", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_InventoryBotConfigs", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "RethinkBotConfigs",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    ServerConfigId = table.Column<int>(type: "INTEGER", nullable: false),
-                    RethinkHost = table.Column<string>(type: "TEXT", nullable: false),
-                    RethinkPort = table.Column<int>(type: "INTEGER", nullable: false),
-                    RethinkPassword = table.Column<string>(type: "TEXT", nullable: false),
-                    IntervalSeconds = table.Column<int>(type: "INTEGER", nullable: false),
-                    MaxSimultaneousVehicles = table.Column<int>(type: "INTEGER", nullable: false),
-                    IsEnabled = table.Column<bool>(type: "INTEGER", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_RethinkBotConfigs", x => x.Id);
-                });
+            // Tabla RethinkBotConfigs (puede ya existir por ExecuteSqlRaw)
+            migrationBuilder.Sql(@"
+                CREATE TABLE IF NOT EXISTS RethinkBotConfigs (
+                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ServerConfigId INTEGER NOT NULL,
+                    RethinkHost TEXT NOT NULL DEFAULT '',
+                    RethinkPort INTEGER NOT NULL DEFAULT 28015,
+                    RethinkPassword TEXT NOT NULL DEFAULT '',
+                    IntervalSeconds INTEGER NOT NULL DEFAULT 30,
+                    MaxSimultaneousVehicles INTEGER NOT NULL DEFAULT 5,
+                    IsEnabled INTEGER NOT NULL DEFAULT 0
+                )");
         }
 
         /// <inheritdoc />
@@ -77,25 +44,6 @@ namespace haulages_bot.Migrations
         {
             migrationBuilder.DropTable(
                 name: "InventoryBotConfigs");
-
-            migrationBuilder.DropTable(
-                name: "RethinkBotConfigs");
-
-            migrationBuilder.DropColumn(
-                name: "TimezoneOffsetHours",
-                table: "ServerConfigs");
-
-            migrationBuilder.DropColumn(
-                name: "EmployeeFullName",
-                table: "Haulages");
-
-            migrationBuilder.DropColumn(
-                name: "RouteDescription",
-                table: "Haulages");
-
-            migrationBuilder.DropColumn(
-                name: "VehicleEconomicNumber",
-                table: "Haulages");
         }
     }
 }

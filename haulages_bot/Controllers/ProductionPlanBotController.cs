@@ -190,7 +190,13 @@ namespace haulages_bot.Controllers
 
                 foreach (var route in plans)
                 {
-                    var existingMonth = route.Months?.FirstOrDefault(m => m.Month == month);
+                    if (route.Months == null || !route.Months.Any())
+                    {
+                        skipped++;
+                        continue;
+                    }
+
+                    var existingMonth = route.Months.FirstOrDefault(m => m.Month == month);
 
                     if (existingMonth == null || existingMonth.ProductionPlanId <= 0)
                     {

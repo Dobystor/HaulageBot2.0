@@ -40,6 +40,9 @@ builder.Services.AddHostedService<RethinkBotService>();
 // Bot de Inventarios (actualización de inventarios de mineral)
 builder.Services.AddHostedService<InventoryBotService>();
 
+// Bot de Planes de Producción (gestión automática mensual/anual)
+builder.Services.AddHostedService<ProductionPlanBotService>();
+
 // Habilitar SignalR para la comunicación en tiempo real.
 builder.Services.AddSignalR();
 

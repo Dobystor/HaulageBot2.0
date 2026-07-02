@@ -96,10 +96,11 @@ namespace haulages_bot.Services
 
         private async Task InitFleet(dbboot db, RethinkBotConfig config, CancellationToken ct)
         {
+            _logger.LogWarning("[RethinkBot] Inicializando flota...");
             var dataConfig = await db.DataConfigurationLocal
                 .Where(dc => dc.ServerConfigId == config.ServerConfigId)
                 .OrderByDescending(dc => dc.Id).FirstOrDefaultAsync(ct);
-            if (dataConfig == null) return;
+            if (dataConfig == null) { _logger.LogWarning("[RethinkBot] Sin dataConfig"); return; }
 
             var selectedVehicleIds = JsonConvert.DeserializeObject<List<int>>(dataConfig.SelectedVehicles) ?? new();
             var selectedRouteIds = JsonConvert.DeserializeObject<List<int>>(dataConfig.SelectedRoutes) ?? new();
@@ -111,13 +112,14 @@ namespace haulages_bot.Services
             var companies = await db.Companies.Where(c => c.ServerConfigId == config.ServerConfigId).ToListAsync(ct);
             var vehicleTypes = await db.Set<VehicleType>().Where(vt => vt.ServerConfigId == config.ServerConfigId).ToListAsync(ct);
 
-            if (!vehicles.Any() || !routes.Any() || !employees.Any()) return;
+            if (!vehicles.Any() || !routes.Any() || !employees.Any()) { _logger.LogWarning($"[RethinkBot] Sin datos: veh={vehicles.Count} rutas={routes.Count} emp={employees.Count}"); return; }
 
             var random = new Random();
             var fleet = new List<SimVehicle>();
 
-            // Volteos/Bajo perfil (de la config general)
-            var dumpTrucks = vehicles.Where(v => v.VehicleTypeId != 1).ToList(); // No scooptrams
+            // Volteos/Bajo perfil (de la config general, excluir scooptrams)
+            var dumpTrucks = vehicles.Where(v => v.VehicleTypeId != 1).ToList();
+            _logger.LogWarning($"[RethinkBot] Volteos disponibles: {dumpTrucks.Count}");
             var numTrucks = Math.Min(config.MaxSimultaneousVehicles, dumpTrucks.Count);
             var selectedTrucks = dumpTrucks.OrderBy(_ => random.Next()).Take(numTrucks).ToList();
 
@@ -145,6 +147,7 @@ namespace haulages_bot.Services
             var server = await db.ServerConfigs.FindAsync(config.ServerConfigId);
             if (server != null && config.ScooptramCount > 0)
             {
+                _logger.LogWarning($"[RethinkBot] Intentando cargar {config.ScooptramCount} scooptrams desde API...");
                 try
                 {
                     using var scoopScope = _scopeFactory.CreateScope();
@@ -154,10 +157,12 @@ namespace haulages_bot.Services
                     httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
                     var host = server.ApiUrl.StartsWith("http") ? server.ApiUrl : $"https://{server.ApiUrl}";
                     var resp = await httpClient.GetAsync($"{host}/Catalog/GetAllVehicles", ct);
+                    _logger.LogWarning($"[RethinkBot] GetAllVehicles status: {resp.StatusCode}");
                     if (resp.IsSuccessStatusCode)
                     {
                         var json = await resp.Content.ReadAsStringAsync(ct);
                         var allApiVehicles = JsonConvert.DeserializeObject<List<ApiVehicleDto>>(json) ?? new();
+                        _logger.LogWarning($"[RethinkBot] Total vehículos API: {allApiVehicles.Count}, Scooptrams (TypeId=1): {allApiVehicles.Count(v => v.VehicleTypeId == 1)}");
                         var apiScoops = allApiVehicles.Where(v => v.VehicleTypeId == 1).OrderBy(_ => random.Next()).Take(config.ScooptramCount).ToList();
 
                         foreach (var s in apiScoops)
@@ -179,7 +184,7 @@ namespace haulages_bot.Services
                         }
                     }
                 }
-                catch (Exception ex) { _logger.LogWarning(ex, "[RethinkBot] Error obteniendo scooptrams del API"); }
+                catch (Exception ex) { _logger.LogWarning($"[RethinkBot] Error obteniendo scooptrams: {ex.Message}"); }
             }
 
             // Asegurar al menos 1 en descarga

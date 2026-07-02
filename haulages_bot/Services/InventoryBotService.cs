@@ -18,8 +18,8 @@ namespace haulages_bot.Services
 {
     /// <summary>
     /// Bot que actualiza inventarios de mineral en SmartFlow.
-    /// Al inicio de cada turno: elimina sitios existentes y agrega nuevos
-    /// basados en los loadPoints de rutas de mineral activas configuradas.
+    /// Al inicio de cada turno: actualiza tonelajes de sitios existentes
+    /// y agrega sitios faltantes basados en loadPoints de rutas de mineral activas.
     /// </summary>
     public class InventoryBotService : BackgroundService
     {
@@ -43,7 +43,7 @@ namespace haulages_bot.Services
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            await Task.Delay(15000, stoppingToken); // Esperar inicio
+            await Task.Delay(15000, stoppingToken);
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -56,7 +56,7 @@ namespace haulages_bot.Services
                     _logger.LogError(ex, "[InventoryBot] Error en ciclo principal");
                 }
 
-                await Task.Delay(60000, stoppingToken); // Revisar cada 60 segundos
+                await Task.Delay(60000, stoppingToken);
             }
         }
 
@@ -74,17 +74,14 @@ namespace haulages_bot.Services
             var server = await db.ServerConfigs.FindAsync(config.ServerConfigId);
             if (server == null) return;
 
-            // Obtener turno actual
             var currentWorkshiftId = await GetCurrentWorkshift(server, tokenService, ct);
             if (currentWorkshiftId <= 0) return;
 
-            // Solo actualizar si cambió el turno
             if (currentWorkshiftId == _lastWorkshiftId) return;
             _lastWorkshiftId = currentWorkshiftId;
 
-            _logHistoryService.AddLog(config.ServerConfigId, $"[InventoryBot] Cambio de turno detectado (Turno {currentWorkshiftId}). Removiendo sitios y agregando nuevos...");
+            _logHistoryService.AddLog(config.ServerConfigId, $"[InventoryBot] Cambio de turno detectado (Turno {currentWorkshiftId}). Actualizando inventarios...");
 
-            // Obtener rutas de mineral configuradas
             var dataConfig = await db.DataConfigurationLocal
                 .Where(dc => dc.ServerConfigId == config.ServerConfigId)
                 .OrderByDescending(dc => dc.Id)
@@ -107,20 +104,27 @@ namespace haulages_bot.Services
                 return;
             }
 
-            // 1. Obtener sitios actuales y eliminarlos todos
+            var random = new Random();
+
+            // 1. Actualizar sitios existentes con nuevos tonelajes
             var existingSites = await GetHistoricalSites(server, tokenService, ct);
-            int removed = 0;
             if (existingSites != null && existingSites.Any())
             {
-                foreach (var site in existingSites)
+                var updates = existingSites.Select(site => (object)new
                 {
-                    var ok = await RemoveSite(server, tokenService, site.OreInventoryHistoricalId, ct);
-                    if (ok) removed++;
+                    tons = random.Next(config.TonnageMin, config.TonnageMax + 1),
+                    isConfirmedOre = true,
+                    oreInventoryHistoricalId = site.OreInventoryHistoricalId
+                }).ToList();
+
+                var updateSuccess = await UpdateInventory(server, tokenService, updates, ct);
+                if (updateSuccess)
+                {
+                    _logHistoryService.AddLog(config.ServerConfigId, $"[InventoryBot] {updates.Count} sitios actualizados con nuevos tonelajes.");
                 }
-                _logHistoryService.AddLog(config.ServerConfigId, $"[InventoryBot] {removed} sitios anteriores eliminados.");
             }
 
-            // 2. Obtener sitios de carga únicos de las rutas de mineral
+            // 2. Agregar sitios faltantes
             var loadPoints = mineralRoutes
                 .Select(r => new { r.loadPointId, r.loadPointName })
                 .Where(lp => !string.IsNullOrWhiteSpace(lp.loadPointName))
@@ -128,25 +132,24 @@ namespace haulages_bot.Services
                 .Select(g => g.First())
                 .ToList();
 
-            // 3. Agregar nuevos sitios con tonelaje aleatorio en una sola llamada (array)
-            var random = new Random();
-            var newSites = loadPoints.Select(lp => new
-            {
-                placeId = lp.loadPointId,
-                place = lp.loadPointName,
-                tons = random.Next(config.TonnageMin, config.TonnageMax + 1),
-                isConfirmedOre = true
-            }).Cast<object>().ToList();
+            var existingPlaceIds = existingSites?.Select(s => s.PlaceId).ToHashSet() ?? new HashSet<int>();
+            var loadPointsToAdd = loadPoints.Where(lp => !existingPlaceIds.Contains(lp.loadPointId)).ToList();
 
-            var addSuccess = await AddSites(server, tokenService, newSites, ct);
+            if (loadPointsToAdd.Any())
+            {
+                var newSites = loadPointsToAdd.Select(lp => (object)new
+                {
+                    placeId = lp.loadPointId,
+                    place = lp.loadPointName,
+                    tons = random.Next(config.TonnageMin, config.TonnageMax + 1),
+                    isConfirmedOre = true
+                }).ToList();
 
-            if (addSuccess)
-            {
-                _logHistoryService.AddLog(config.ServerConfigId, $"[InventoryBot] {newSites.Count} sitios nuevos agregados exitosamente.");
-            }
-            else
-            {
-                _logHistoryService.AddLog(config.ServerConfigId, "[InventoryBot] Error al agregar sitios nuevos.", true);
+                var addSuccess = await AddSites(server, tokenService, newSites, ct);
+                if (addSuccess)
+                {
+                    _logHistoryService.AddLog(config.ServerConfigId, $"[InventoryBot] {newSites.Count} sitios nuevos agregados.");
+                }
             }
         }
 
@@ -168,8 +171,7 @@ namespace haulages_bot.Services
 
                 if (shifts == null || !shifts.Any()) return -1;
 
-                // Determinar turno actual por hora
-                var now = DateTime.UtcNow.AddHours(-6); // Hora local México
+                var now = DateTime.UtcNow.AddHours(-6);
                 var currentTime = now.TimeOfDay;
 
                 foreach (var shift in shifts.Where(s => s.Enabled))
@@ -182,7 +184,7 @@ namespace haulages_bot.Services
                         if (currentTime >= start && currentTime < end)
                             return shift.WorkShiftId;
                     }
-                    else // Turno nocturno (cruza medianoche)
+                    else
                     {
                         if (currentTime >= start || currentTime < end)
                             return shift.WorkShiftId;
@@ -221,7 +223,7 @@ namespace haulages_bot.Services
             }
         }
 
-        private async Task<bool> RemoveSite(ServerConfig server, TokenService tokenService, int siteId, CancellationToken ct)
+        private async Task<bool> UpdateInventory(ServerConfig server, TokenService tokenService, List<object> updates, CancellationToken ct)
         {
             try
             {
@@ -230,7 +232,10 @@ namespace haulages_bot.Services
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
                 var host = server.ApiUrl.StartsWith("http") ? server.ApiUrl : $"https://{server.ApiUrl}";
-                var response = await client.DeleteAsync($"{host}/service/haulages/api/v2/inventory/sites/remove/{siteId}", ct);
+                var json = JsonConvert.SerializeObject(updates);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await client.PutAsync($"{host}/service/haulages/api/v2/inventory/sites/update", content, ct);
                 return response.IsSuccessStatusCode;
             }
             catch

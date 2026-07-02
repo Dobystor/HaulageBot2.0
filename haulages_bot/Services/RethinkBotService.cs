@@ -145,6 +145,14 @@ namespace haulages_bot.Services
             var dbEmployees = await db.Employees
                 .Where(e => e.ServerConfigId == config.ServerConfigId && selectedEmployeeIds.Contains(e.EmployeeId))
                 .ToListAsync(ct);
+            var dbCompanies = await db.Companies
+                .Where(c => c.ServerConfigId == config.ServerConfigId)
+                .ToListAsync(ct);
+            var dbVehicleTypes = await db.Set<VehicleType>()
+                .Where(vt => vt.ServerConfigId == config.ServerConfigId)
+                .ToListAsync(ct);
+            // Scooptrams: VehicleTypeId = 1 (SCOOPTRAM FRONT LOADERS)
+            var scooptrams = dbVehicles.Where(v => v.VehicleTypeId == 1).ToList();
 
             if (!dbVehicles.Any() || !dbRoutes.Any() || !dbEmployees.Any())
             {
@@ -164,19 +172,35 @@ namespace haulages_bot.Services
 
                 var route = dbRoutes[random.Next(dbRoutes.Count)];
                 var employee = dbEmployees[random.Next(dbEmployees.Count)];
+                var vehicleCompany = dbCompanies.FirstOrDefault(c => c.CompanyId == vehicle.CompanyId);
+                var vehicleType = dbVehicleTypes.FirstOrDefault(vt => vt.VehicleTypeId == vehicle.VehicleTypeId);
+                var employeeCompany = dbCompanies.FirstOrDefault(c => c.CompanyId == employee.CompanyId);
+                var loadVehicle = scooptrams.Any() ? scooptrams[random.Next(scooptrams.Count)] : vehicle;
+                var loadVehicleCompany = dbCompanies.FirstOrDefault(c => c.CompanyId == loadVehicle.CompanyId);
+                var loadVehicleType = dbVehicleTypes.FirstOrDefault(vt => vt.VehicleTypeId == loadVehicle.VehicleTypeId);
 
                 vehicles.Add(new SimulatedVehicle
                 {
                     VehicleId = vehicle.VehicleId,
                     VehicleEconomicNumber = vehicle.EconomicNumber,
                     VehicleCompanyId = vehicle.CompanyId,
+                    VehicleCompanyName = vehicleCompany?.Name ?? "LASEC",
                     VehicleTypeId = vehicle.VehicleTypeId,
+                    VehicleTypeName = vehicleType?.Name ?? "DUMP TRUCKS (HAULING) (VOLQUETE)",
                     EmployeeId = employee.EmployeeId,
                     EmployeeName = employee.FullName,
+                    EmployeeCompanyId = employee.CompanyId,
+                    EmployeeCompanyName = employeeCompany?.Name ?? "LASEC",
                     Route = route,
                     CurrentStatus = STATUS_LOADING,
-                    LastUpdate = DateTime.UtcNow.AddSeconds(-config.IntervalSeconds - 1), // Forzar que avance en el primer ciclo
-                    NeedsFirstUpdate = true
+                    LastUpdate = DateTime.UtcNow.AddSeconds(-config.IntervalSeconds - 1),
+                    NeedsFirstUpdate = true,
+                    LoadVehicleId = loadVehicle.VehicleId,
+                    LoadVehicleEconomicNumber = loadVehicle.EconomicNumber,
+                    LoadVehicleCompanyId = loadVehicle.CompanyId,
+                    LoadVehicleCompanyName = loadVehicleCompany?.Name ?? "LASEC",
+                    LoadVehicleTypeId = loadVehicle.VehicleTypeId,
+                    LoadVehicleTypeName = loadVehicleType?.Name ?? "SCOOPTRAM FRONT LOADERS"
                 });
             }
 
@@ -316,11 +340,39 @@ namespace haulages_bot.Services
 
         private static string BuildDocumentJson(SimulatedVehicle sim)
         {
-            // Documento ultra-mínimo — solo los campos que cambian
-            // Usamos conflict:update para no borrar campos existentes
+            var loadDate = DateTime.UtcNow.AddMinutes(-new Random().Next(5, 30));
             var doc = new
             {
                 VehicleId = sim.VehicleId,
+                VehicleEconomicNumber = sim.VehicleEconomicNumber,
+                VehicleCompanyId = sim.VehicleCompanyId,
+                VehicleCompanyName = sim.VehicleCompanyName,
+                VehicleTypeId = sim.VehicleTypeId,
+                VehicleTypeName = sim.VehicleTypeName,
+                EmployeeId = sim.EmployeeId,
+                EmployeeName = sim.EmployeeName,
+                EmployeeCompanyId = sim.EmployeeCompanyId,
+                EmployeeCompanyName = sim.EmployeeCompanyName,
+                LoadPointId = sim.Route.loadPointId,
+                LoadPointName = sim.Route.loadPointName,
+                UnLoadPointId = sim.Route.unLoadPointId,
+                UnLoadPointName = sim.Route.unLoadPointName,
+                PathId = sim.Route.haulagePathId,
+                PathName = sim.Route.description,
+                MaterialId = sim.Route.materialTypeId ?? 0,
+                MaterialName = sim.Route.materialType ?? "MINERAL",
+                LoadDate = new { reql_type = "TIME", epoch_time = ((DateTimeOffset)loadDate).ToUnixTimeSeconds(), timezone = "-06:00" },
+                UnloadDate = (object?)null,
+                LoadEmployeeId = sim.EmployeeId,
+                LoadEmployeeName = sim.EmployeeName,
+                LoadEmployeeCompanyId = sim.EmployeeCompanyId,
+                LoadEmployeeCompanyName = sim.EmployeeCompanyName,
+                LoadVehicleId = sim.LoadVehicleId,
+                LoadVehicleEconomicNumber = sim.LoadVehicleEconomicNumber,
+                LoadVehicleCompanyId = sim.LoadVehicleCompanyId,
+                LoadVehicleCompanyName = sim.LoadVehicleCompanyName,
+                LoadVehicleTypeId = sim.LoadVehicleTypeId,
+                LoadVehicleTypeName = sim.LoadVehicleTypeName,
                 Status = sim.CurrentStatus,
                 IsDeleted = false
             };
@@ -333,13 +385,24 @@ namespace haulages_bot.Services
             public int VehicleId { get; set; }
             public string VehicleEconomicNumber { get; set; } = "";
             public int VehicleCompanyId { get; set; }
+            public string VehicleCompanyName { get; set; } = "";
             public int VehicleTypeId { get; set; }
+            public string VehicleTypeName { get; set; } = "";
             public int EmployeeId { get; set; }
             public string EmployeeName { get; set; } = "";
+            public int EmployeeCompanyId { get; set; }
+            public string EmployeeCompanyName { get; set; } = "";
             public haulages_bot.Models.Route Route { get; set; } = null!;
             public int CurrentStatus { get; set; }
             public DateTime LastUpdate { get; set; }
             public bool NeedsFirstUpdate { get; set; } = true;
+            // Scooptram (vehículo de carga)
+            public int LoadVehicleId { get; set; }
+            public string LoadVehicleEconomicNumber { get; set; } = "";
+            public int LoadVehicleCompanyId { get; set; }
+            public string LoadVehicleCompanyName { get; set; } = "";
+            public int LoadVehicleTypeId { get; set; }
+            public string LoadVehicleTypeName { get; set; } = "";
         }
     }
 }

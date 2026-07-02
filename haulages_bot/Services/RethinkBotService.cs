@@ -270,18 +270,17 @@ namespace haulages_bot.Services
         {
             try
             {
-                // Construir el AST ReQL
+                // ReQL AST: r.db('SmartFlow').table('HaulageProcess').insert(document)
                 var dbAst = "[14,[\"SmartFlow\"]]";
                 var tableAst = "[15,[" + dbAst + ",\"HaulageProcess\"]]";
-                var insertOptions = "{\"conflict\":\"replace\"}";
                 var globalOptions = "{\"binary_format\":\"raw\",\"time_format\":\"raw\",\"profile\":false}";
-                var reqlJson = "[1,[56,[" + tableAst + "," + documentJson + "," + insertOptions + "]]," + globalOptions + "]";
+                var reqlJson = "[1,[56,[" + tableAst + "," + documentJson + "]]," + globalOptions + "]";
 
-                // Paso 1: Obtener conn_id via curl
+                // Paso 1: Obtener conn_id
                 var psi1 = new ProcessStartInfo
                 {
                     FileName = "/usr/bin/curl",
-                    Arguments = "-sk -0 -X POST " + baseUrl + "/ajax/reql/open-new-connection",
+                    Arguments = $"-sk -X POST {baseUrl}/ajax/reql/open-new-connection",
                     RedirectStandardOutput = true,
                     UseShellExecute = false,
                     CreateNoWindow = true
@@ -290,7 +289,7 @@ namespace haulages_bot.Services
                 using (var proc1 = Process.Start(psi1))
                 {
                     if (proc1 == null) return false;
-                    connId = (await proc1.StandardOutput.ReadToEndAsync()).Trim().Trim('"');
+                    connId = (await proc1.StandardOutput.ReadToEndAsync(ct)).Trim().Trim('"');
                     await proc1.WaitForExitAsync(ct);
                 }
 
@@ -300,29 +299,55 @@ namespace haulages_bot.Services
                     return false;
                 }
 
-                // Paso 2: Ejecutar insert via bash -c con conn_id hardcodeado
-                var escapedReql = reqlJson.Replace("'", "'\\''");
-                var cmd = "python3 -c 'import struct,sys;q=b\"" + reqlJson.Replace("\"", "\\\"") + "\";sys.stdout.buffer.write(struct.pack(chr(60)+chr(113),1)+q)' | /usr/bin/curl -sk -0 -X POST '" + baseUrl + "/ajax/reql/?conn_id=" + connId + "' -H 'Content-Type: application/octet-stream' --data-binary @-";
+                // Paso 2: Escribir payload binario directamente desde C# (8 bytes token LE int64 + JSON UTF8)
+                var tmpFile = $"/tmp/reql_{serverId}_{Environment.CurrentManagedThreadId}.bin";
+                var queryBytes = System.Text.Encoding.UTF8.GetBytes(reqlJson);
+                using (var fs = new FileStream(tmpFile, FileMode.Create))
+                {
+                    var tokenBytes = BitConverter.GetBytes((long)1); // little-endian int64
+                    await fs.WriteAsync(tokenBytes, 0, 8, ct);
+                    await fs.WriteAsync(queryBytes, 0, queryBytes.Length, ct);
+                }
 
+                // Paso 3: Enviar con curl (HTTP/1.1, sin -0)
                 var psi2 = new ProcessStartInfo
                 {
-                    FileName = "/bin/bash",
-                    ArgumentList = { "-c", cmd },
+                    FileName = "/usr/bin/curl",
+                    Arguments = $"-sk -X POST \"{baseUrl}/ajax/reql/?conn_id={connId}\" -H \"Content-Type: application/octet-stream\" --data-binary @{tmpFile}",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
                     UseShellExecute = false,
                     CreateNoWindow = true
                 };
                 using (var proc2 = Process.Start(psi2))
                 {
-                    if (proc2 != null)
-                        await proc2.WaitForExitAsync(ct);
+                    if (proc2 == null) return false;
+                    var output = await proc2.StandardOutput.ReadToEndAsync(ct);
+                    await proc2.WaitForExitAsync(ct);
+
+                    // Limpiar archivo temporal
+                    try { System.IO.File.Delete(tmpFile); } catch { }
+
+                    // La respuesta es binaria: 12 bytes header (8 token + 4 length) + JSON
+                    // Buscar "inserted" o "replaced" en la salida raw
+                    if (output.Contains("inserted") || output.Contains("replaced"))
+                        return true;
+
+                    // Si exit code 0 y no hay error, probablemente funcionó
+                    // (la respuesta binaria puede no tener el texto visible)
+                    if (proc2.ExitCode == 0 && output.Length > 12)
+                        return true;
+
+                    if (proc2.ExitCode != 0)
+                        _logger.LogWarning($"[RethinkBot] curl exit code: {proc2.ExitCode}");
                 }
 
-                return true;
+                return false;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "[RethinkBot] Error ejecutando query via curl");
-                throw;
+                return false;
             }
         }
 

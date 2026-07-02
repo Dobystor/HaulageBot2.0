@@ -109,6 +109,44 @@ namespace haulages_bot.Controllers
             return Ok(new { isEnabled = config.IsEnabled });
         }
 
+        /// <summary>Diagnóstico: probar remove de un sitio específico y mostrar respuesta</summary>
+        [HttpGet("{serverId}/debug-remove/{siteId}")]
+        public async Task<IActionResult> DebugRemove(
+            int serverId, int siteId,
+            [FromServices] IHttpClientFactory httpClientFactory,
+            [FromServices] TokenService tokenService)
+        {
+            var server = await _dbContext.ServerConfigs.FindAsync(serverId);
+            if (server == null) return BadRequest("Servidor no encontrado");
+
+            var client = httpClientFactory.CreateClient();
+            var token = await tokenService.GetTokenAsync(server.Id);
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            var host = server.ApiUrl.StartsWith("http") ? server.ApiUrl : $"https://{server.ApiUrl}";
+            var url = $"{host}/service/haulages/api/v2/inventory/sites/remove/{siteId}";
+
+            // Probar con DELETE
+            var deleteResp = await client.DeleteAsync(url);
+            var deleteBody = await deleteResp.Content.ReadAsStringAsync();
+
+            // Probar con POST (por si usa POST en vez de DELETE)
+            var client2 = httpClientFactory.CreateClient();
+            var token2 = await tokenService.GetTokenAsync(server.Id);
+            client2.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token2);
+            var postResp = await client2.PostAsync(url, null);
+            var postBody = await postResp.Content.ReadAsStringAsync();
+
+            return Ok(new
+            {
+                url,
+                deleteStatus = (int)deleteResp.StatusCode,
+                deleteBody,
+                postStatus = (int)postResp.StatusCode,
+                postBody
+            });
+        }
+
         /// <summary>Diagnóstico: ver qué devuelve el API de sitios históricos y qué loadPoints se tienen</summary>
         [HttpGet("{serverId}/debug")]
         public async Task<IActionResult> Debug(

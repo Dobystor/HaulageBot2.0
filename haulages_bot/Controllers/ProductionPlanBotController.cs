@@ -394,10 +394,10 @@ namespace haulages_bot.Controllers
             public string? HaulagePathName { get; set; }
 
             [JsonProperty("distance")]
-            public int Distance { get; set; }
+            public decimal Distance { get; set; }
 
             [JsonProperty("timeInHour")]
-            public int TimeInHour { get; set; }
+            public decimal TimeInHour { get; set; }
 
             [JsonProperty("months")]
             public List<PlanMonthDto>? Months { get; set; }

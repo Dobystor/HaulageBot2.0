@@ -34,7 +34,6 @@ namespace haulages_bot.Controllers
 
             if (config == null)
             {
-                // Devolver config por defecto
                 return Ok(new InventoryBotConfig
                 {
                     ServerConfigId = serverId,
@@ -91,7 +90,6 @@ namespace haulages_bot.Controllers
 
             if (config == null)
             {
-                // Crear config por defecto y activar
                 config = new InventoryBotConfig
                 {
                     ServerConfigId = serverId,
@@ -136,7 +134,11 @@ namespace haulages_bot.Controllers
             });
         }
 
-        /// <summary>Forzar actualización de inventarios manualmente (sin esperar cambio de turno)</summary>
+        /// <summary>
+        /// Forzar actualización de inventarios manualmente.
+        /// 1) Elimina todos los sitios existentes (remove)
+        /// 2) Agrega nuevos sitios basados en los loadPoints de rutas de mineral activas (add)
+        /// </summary>
         [HttpPost("{serverId}/force")]
         public async Task<IActionResult> ForceUpdate(
             int serverId,
@@ -147,7 +149,6 @@ namespace haulages_bot.Controllers
             var config = await _dbContext.InventoryBotConfigs
                 .FirstOrDefaultAsync(c => c.ServerConfigId == serverId);
 
-            // Usar config existente o valores por defecto
             var tonnageMin = config?.TonnageMin ?? 200;
             var tonnageMax = config?.TonnageMax ?? 800;
 
@@ -155,9 +156,9 @@ namespace haulages_bot.Controllers
             if (server == null)
                 return BadRequest(new { message = "Servidor no encontrado." });
 
-            logHistory.AddLog(serverId, "[InventoryBot] Ejecución manual forzada. Actualizando inventarios...");
+            logHistory.AddLog(serverId, "[InventoryBot] Ejecución manual forzada. Removiendo sitios anteriores y agregando nuevos...");
 
-            // Obtener rutas de mineral configuradas
+            // Obtener rutas de mineral activas y seleccionadas
             var dataConfig = await _dbContext.DataConfigurationLocal
                 .Where(dc => dc.ServerConfigId == serverId)
                 .OrderByDescending(dc => dc.Id)
@@ -177,52 +178,54 @@ namespace haulages_bot.Controllers
 
             if (!mineralRoutes.Any())
             {
-                logHistory.AddLog(serverId, "[InventoryBot] No hay rutas de mineral configuradas.", true);
-                return BadRequest(new { message = "No hay rutas de mineral configuradas." });
+                logHistory.AddLog(serverId, "[InventoryBot] No hay rutas de mineral activas configuradas.", true);
+                return BadRequest(new { message = "No hay rutas de mineral activas configuradas." });
             }
 
-            var loadPointNames = mineralRoutes
-                .Select(r => r.loadPointName)
-                .Where(n => !string.IsNullOrWhiteSpace(n))
-                .Distinct()
+            // 1. Obtener sitios actuales y eliminarlos todos
+            var existingSites = await GetHistoricalSites(server, tokenService, httpClientFactory);
+            int removed = 0;
+            if (existingSites != null && existingSites.Any())
+            {
+                foreach (var site in existingSites)
+                {
+                    var ok = await RemoveSite(server, tokenService, httpClientFactory, site.OreInventoryHistoricalId);
+                    if (ok) removed++;
+                }
+                logHistory.AddLog(serverId, $"[InventoryBot] {removed} sitios anteriores eliminados.");
+            }
+
+            // 2. Obtener sitios de carga únicos de las rutas de mineral
+            var loadPoints = mineralRoutes
+                .Select(r => new { r.loadPointId, r.loadPointName })
+                .Where(lp => !string.IsNullOrWhiteSpace(lp.loadPointName))
+                .GroupBy(lp => lp.loadPointId)
+                .Select(g => g.First())
                 .ToList();
 
-            // Obtener sitios de inventario histórico
-            var historicalSites = await GetHistoricalSites(server, tokenService, httpClientFactory);
-            if (historicalSites == null || !historicalSites.Any())
-            {
-                logHistory.AddLog(serverId, "[InventoryBot] No se pudieron obtener sitios de inventario histórico.", true);
-                return BadRequest(new { message = "No se pudieron obtener sitios de inventario histórico del servidor." });
-            }
-
-            // Actualizar TODOS los sitios de inventario con nuevos valores aleatorios
+            // 3. Agregar nuevos sitios con tonelaje aleatorio
             var random = new Random();
-            var updates = new List<object>();
-
-            foreach (var site in historicalSites)
+            int added = 0;
+            foreach (var lp in loadPoints)
             {
                 var tons = random.Next(tonnageMin, tonnageMax + 1);
-                updates.Add(new
-                {
-                    tons = tons,
-                    isConfirmedOre = true,
-                    oreInventoryHistoricalId = site.OreInventoryHistoricalId
-                });
+                var ok = await AddSite(server, tokenService, httpClientFactory, lp.loadPointId, lp.loadPointName, tons);
+                if (ok) added++;
             }
 
-            // Enviar actualización (reemplaza los existentes con nuevos valores)
-            var success = await UpdateInventory(server, tokenService, httpClientFactory, updates);
-            if (success)
+            if (added > 0)
             {
-                logHistory.AddLog(serverId, $"[InventoryBot] (Manual) {updates.Count} sitios actualizados exitosamente.");
-                return Ok(new { message = $"{updates.Count} sitios actualizados exitosamente.", updated = updates.Count });
+                logHistory.AddLog(serverId, $"[InventoryBot] (Manual) {added} sitios nuevos agregados exitosamente.");
+                return Ok(new { message = $"{removed} eliminados, {added} nuevos agregados.", removed, added });
             }
             else
             {
-                logHistory.AddLog(serverId, "[InventoryBot] Error al actualizar inventarios (ejecución manual).", true);
-                return StatusCode(500, new { message = "Error al actualizar inventarios en el servidor remoto." });
+                logHistory.AddLog(serverId, "[InventoryBot] Error al agregar sitios nuevos.", true);
+                return StatusCode(500, new { message = "Error al agregar sitios de inventario." });
             }
         }
+
+        #region Helpers HTTP
 
         private async Task<List<HistoricalSiteDto>?> GetHistoricalSites(ServerConfig server, TokenService tokenService, IHttpClientFactory httpClientFactory)
         {
@@ -246,7 +249,7 @@ namespace haulages_bot.Controllers
             }
         }
 
-        private async Task<bool> UpdateInventory(ServerConfig server, TokenService tokenService, IHttpClientFactory httpClientFactory, List<object> updates)
+        private async Task<bool> RemoveSite(ServerConfig server, TokenService tokenService, IHttpClientFactory httpClientFactory, int siteId)
         {
             try
             {
@@ -255,10 +258,7 @@ namespace haulages_bot.Controllers
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
                 var host = server.ApiUrl.StartsWith("http") ? server.ApiUrl : $"https://{server.ApiUrl}";
-                var json = JsonConvert.SerializeObject(updates);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-                var response = await client.PutAsync($"{host}/service/haulages/api/v2/inventory/sites/update", content);
+                var response = await client.DeleteAsync($"{host}/service/haulages/api/v2/inventory/sites/remove/{siteId}");
                 return response.IsSuccessStatusCode;
             }
             catch
@@ -266,6 +266,36 @@ namespace haulages_bot.Controllers
                 return false;
             }
         }
+
+        private async Task<bool> AddSite(ServerConfig server, TokenService tokenService, IHttpClientFactory httpClientFactory, int placeId, string placeName, int tons)
+        {
+            try
+            {
+                var client = httpClientFactory.CreateClient();
+                var token = await tokenService.GetTokenAsync(server.Id);
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+                var host = server.ApiUrl.StartsWith("http") ? server.ApiUrl : $"https://{server.ApiUrl}";
+                var payload = new
+                {
+                    placeId = placeId,
+                    place = placeName,
+                    tons = tons,
+                    isConfirmedOre = true
+                };
+                var json = JsonConvert.SerializeObject(payload);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await client.PostAsync($"{host}/service/haulages/api/v2/Inventory/sites/add", content);
+                return response.IsSuccessStatusCode;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        #endregion
 
         private class HistoricalSiteDto
         {

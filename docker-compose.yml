@@ -1,0 +1,36 @@
+services:
+  haulage_bot:
+    build:
+      context: ./haulages_bot
+      dockerfile: Dockerfile
+    image: haulage_bot:2.0
+    container_name: haulage_bot
+    restart: unless-stopped
+    ports:
+      # Puerto del host : puerto del contenedor
+      - "${HOST_PORT:-1254}:80"
+    environment:
+      # Entorno de ejecución (Production / Development)
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Production}
+      - ASPNETCORE_URLS=http://+:80
+      # Cadena de conexión: la DB SQLite vive en el volumen persistente /data
+      - ConnectionStrings__DefaultConnection=${DB_CONNECTION:-Data Source=/data/haulage_bot.db}
+      # Configuración de autenticación contra SmartFlow (se puede sobreescribir en .env)
+      - Authentication__ApiUrl=${AUTH_API_URL:-https://demo-acarreos.smartflow.com.mx}
+      - Authentication__ClientId=${AUTH_CLIENT_ID:-private.networking.app}
+      - Authentication__ClientSecret=${AUTH_CLIENT_SECRET:-UxwYJsELeTnSc2Zz642K}
+      # Ajuste de zona horaria (horas a restar). México = -6
+      - TimezoneOffsetHours=${TIMEZONE_OFFSET_HOURS:--6}
+    volumes:
+      # Persistencia de la base de datos SQLite entre reinicios/actualizaciones
+      - haulage_bot_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+volumes:
+  haulage_bot_data:
+    driver: local

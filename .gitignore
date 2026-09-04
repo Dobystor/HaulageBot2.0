@@ -407,9 +407,12 @@ BuildingBlocks/
 
 resources/
 vars.env
-docker-compose*
-.env
 SmartFlow/
+
+# Docker: se versiona docker-compose.yml y .env.example,
+# pero NUNCA el .env real (contiene secretos)
+.env
+!.env.example
 
 # Base de datos SQLite local — NO subir al repo, es local por instancia
 *.db

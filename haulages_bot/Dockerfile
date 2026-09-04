@@ -1,40 +1,32 @@
+# ============================================================
+# Dockerfile multi-stage para HaulageBot2.0
+# Compila y publica la app dentro del contenedor (autocontenido).
+# ============================================================
+
+# --- Etapa 1: build ---
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+# Copiar el csproj y restaurar dependencias (cache de capas)
+COPY haulages_bot.csproj ./
+RUN dotnet restore haulages_bot.csproj
+
+# Copiar el resto del código y publicar
+COPY . ./
+RUN dotnet publish haulages_bot.csproj -c Release -o /app/publish /p:UseAppHost=false
+
+# --- Etapa 2: runtime ---
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
-ARG source
 WORKDIR /app
+
+# curl es necesario para el healthcheck y para que el RethinkBot ejecute peticiones ReQL
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
 EXPOSE 80
-HEALTHCHECK --interval=5s --timeout=10s --retries=5 CMD curl --fail http://localhost/hc
-COPY ${source:-obj/Docker/publish} .
+
+# La app escucha en el puerto 80 dentro del contenedor
+ENV ASPNETCORE_URLS=http://+:80
+
+COPY --from=build /app/publish .
+
 ENTRYPOINT ["dotnet", "haulages_bot.dll"]
-
-
-
-# Consulte https://aka.ms/customizecontainer para aprender a personalizar su contenedor de depuración y cómo Visual Studio usa este Dockerfile para compilar sus imágenes para una depuración más rápida.
-
-# Esta fase se usa cuando se ejecuta desde VS en modo rápido (valor predeterminado para la configuración de depuración)
-#FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
-#USER app
-#WORKDIR /app
-#EXPOSE 8080
-#EXPOSE 8081
-#
-#
-## Esta fase se usa para compilar el proyecto de servicio
-#FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-#ARG BUILD_CONFIGURATION=Release
-#WORKDIR /src
-#COPY ["WebApplication4/WebApplication4.csproj", "WebApplication4/"]
-#RUN dotnet restore "./WebApplication4/WebApplication4.csproj"
-#COPY . .
-#WORKDIR "/src/WebApplication4"
-#RUN dotnet build "./WebApplication4.csproj" -c $BUILD_CONFIGURATION -o /app/build
-#
-## Esta fase se usa para publicar el proyecto de servicio que se copiará en la fase final.
-#FROM build AS publish
-#ARG BUILD_CONFIGURATION=Release
-#RUN dotnet publish "./WebApplication4.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
-#
-## Esta fase se usa en producción o cuando se ejecuta desde VS en modo normal (valor predeterminado cuando no se usa la configuración de depuración)
-#FROM base AS final
-#WORKDIR /app
-#COPY --from=publish /app/publish .
-#ENTRYPOINT ["dotnet", "WebApplication4.dll"]

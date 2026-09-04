@@ -1,0 +1,16 @@
+**/.git
+**/.gitignore
+**/.vs
+**/.vscode
+**/bin
+**/obj
+**/node_modules
+**/.env
+**/docker-compose*
+**/Dockerfile*
+**/*.user
+# Base de datos SQLite local: no copiar al contexto de build
+**/*.db
+**/*.db-shm
+**/*.db-wal
+README.md

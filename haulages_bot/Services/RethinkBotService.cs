@@ -82,7 +82,7 @@ namespace haulages_bot.Services
                     if (!_fleet.ContainsKey(config.ServerConfigId))
                     {
                         _logger.LogWarning($"[RethinkBot] Fleet no existe, llamando InitFleet para server {config.ServerConfigId}");
-                        await InitFleet(db, config, ct);
+                        await InitFleet(db, config, server, tokenService, ct);
                     }
 
                     // Avanzar status de cada vehículo
@@ -95,7 +95,7 @@ namespace haulages_bot.Services
             }
         }
 
-        private async Task InitFleet(dbboot db, RethinkBotConfig config, CancellationToken ct)
+        private async Task InitFleet(dbboot db, RethinkBotConfig config, ServerConfig server, TokenService tokenService, CancellationToken ct)
         {
             _logger.LogWarning("[RethinkBot] Inicializando flota...");
             var dataConfig = await db.DataConfigurationLocal
@@ -144,13 +144,23 @@ namespace haulages_bot.Services
                 });
             }
 
-            // Scooptrams: obtener de la DB local (todos los de tipo 1, no dependen de config general)
-            var server = await db.ServerConfigs.FindAsync(config.ServerConfigId);
+            // Scooptrams: primero intentar de la DB local (tipo 1); si no hay, obtener de la API
             if (config.ScooptramCount > 0)
             {
-                var allScoops = await db.Vehicles.Where(v => v.ServerConfigId == config.ServerConfigId && v.VehicleTypeId == 1).ToListAsync(ct);
-                _logger.LogWarning($"[RethinkBot] Scooptrams en DB local: {allScoops.Count}");
-                var selectedScoops = allScoops.OrderBy(_ => random.Next()).Take(config.ScooptramCount).ToList();
+                var localScoops = await db.Vehicles
+                    .Where(v => v.ServerConfigId == config.ServerConfigId && v.VehicleTypeId == 1)
+                    .Select(v => new ScoopInfo { VehicleId = v.VehicleId, EconomicNumber = v.EconomicNumber, CompanyId = v.CompanyId })
+                    .ToListAsync(ct);
+                _logger.LogWarning($"[RethinkBot] Scooptrams en DB local: {localScoops.Count}");
+
+                // Fallback: si no hay scooptrams locales, obtenerlos de la API /Catalog/GetAllVehicles
+                if (!localScoops.Any())
+                {
+                    localScoops = await FetchScooptramsFromApi(server, tokenService, ct);
+                    _logger.LogWarning($"[RethinkBot] Scooptrams desde API: {localScoops.Count}");
+                }
+
+                var selectedScoops = localScoops.OrderBy(_ => random.Next()).Take(config.ScooptramCount).ToList();
 
                 foreach (var s in selectedScoops)
                 {
@@ -163,8 +173,8 @@ namespace haulages_bot.Services
                     fleet.Add(new SimVehicle
                     {
                         VehicleId = s.VehicleId, EconomicNumber = s.EconomicNumber,
-                        CompanyId = s.CompanyId, CompanyName = company?.Name ?? "LASEC",
-                        VehicleTypeId = 1, VehicleTypeName = vType?.Name ?? "SCOOPTRAM FRONT LOADERS",
+                        CompanyId = s.CompanyId, CompanyName = company?.Name ?? s.CompanyName ?? "LASEC",
+                        VehicleTypeId = 1, VehicleTypeName = vType?.Name ?? s.VehicleTypeName ?? "SCOOPTRAM FRONT LOADERS",
                         EmployeeId = emp.EmployeeId, EmployeeName = emp.FullName,
                         EmployeeCompanyId = emp.CompanyId, EmployeeCompanyName = empCompany?.Name ?? "LASEC",
                         Route = route, Status = STATUS_LOADING,
@@ -358,9 +368,12 @@ namespace haulages_bot.Services
                 using (var p = Process.Start(psi2))
                 {
                     if (p == null) return false;
-                    await p.StandardOutput.ReadToEndAsync(ct);
+                    var response = await p.StandardOutput.ReadToEndAsync(ct);
                     await p.WaitForExitAsync(ct);
                     try { File.Delete(tmpFile); } catch { }
+                    // Log de diagnóstico: la respuesta de RethinkDB indica si replaced/inserted/errors
+                    if (!string.IsNullOrWhiteSpace(response) && (response.Contains("\"e\":") || response.Contains("error")))
+                        _logger.LogWarning($"[RethinkBot] Respuesta ReQL: {response.Substring(0, Math.Min(response.Length, 300))}");
                     return p.ExitCode == 0;
                 }
             }
@@ -393,6 +406,61 @@ namespace haulages_bot.Services
                 return shifts.First().WorkShiftId;
             }
             catch { return -1; }
+        }
+
+        private async Task<List<ScoopInfo>> FetchScooptramsFromApi(ServerConfig server, TokenService tokenService, CancellationToken ct)
+        {
+            var result = new List<ScoopInfo>();
+            try
+            {
+                var client = _httpClientFactory.CreateClient();
+                var token = await tokenService.GetTokenAsync(server.Id);
+                if (string.IsNullOrWhiteSpace(token)) { _logger.LogWarning("[RethinkBot] Sin token para obtener scooptrams de la API"); return result; }
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+                var host = server.ApiUrl.StartsWith("http") ? server.ApiUrl : $"https://{server.ApiUrl}";
+                var resp = await client.GetAsync($"{host}/Catalog/GetAllVehicles", ct);
+                if (!resp.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning($"[RethinkBot] /Catalog/GetAllVehicles respondió {(int)resp.StatusCode}");
+                    return result;
+                }
+
+                var json = await resp.Content.ReadAsStringAsync(ct);
+                // La respuesta debe ser JSON; si viene HTML (login redirect) abortamos
+                if (string.IsNullOrWhiteSpace(json) || json.TrimStart().StartsWith("<"))
+                {
+                    _logger.LogWarning("[RethinkBot] /Catalog/GetAllVehicles devolvió contenido no-JSON (posible falta de auth)");
+                    return result;
+                }
+
+                var vehicles = JsonConvert.DeserializeObject<List<ApiVehicleDto>>(json) ?? new();
+                foreach (var v in vehicles.Where(v => v.VehicleTypeId == 1))
+                {
+                    result.Add(new ScoopInfo
+                    {
+                        VehicleId = v.VehicleId,
+                        EconomicNumber = v.EconomicNumber ?? v.VehicleId.ToString(),
+                        CompanyId = v.CompanyId,
+                        CompanyName = v.CompanyName,
+                        VehicleTypeName = v.VehicleTypeName
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning($"[RethinkBot] Error obteniendo scooptrams de la API: {ex.Message}");
+            }
+            return result;
+        }
+
+        private class ScoopInfo
+        {
+            public int VehicleId { get; set; }
+            public string EconomicNumber { get; set; } = "";
+            public int CompanyId { get; set; }
+            public string? CompanyName { get; set; }
+            public string? VehicleTypeName { get; set; }
         }
 
         private class SimVehicle

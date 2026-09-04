@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using haulages_bot.Data;
 
@@ -11,9 +12,11 @@ using haulages_bot.Data;
 namespace haulages_bot.Migrations
 {
     [DbContext(typeof(dbboot))]
-    partial class dbbootModelSnapshot : ModelSnapshot
+    [Migration("20260904040759_AddDecimalPrecision")]
+    partial class AddDecimalPrecision
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

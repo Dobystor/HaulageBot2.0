@@ -67,6 +67,22 @@ namespace haulages_bot.Data
                 .HasOne(e => e.Company)
                 .WithMany()
                 .HasForeignKey(e => new { e.CompanyId, e.ServerConfigId });
+
+            // Precisión explícita para propiedades decimal (evita truncamiento silencioso en SQL Server)
+            modelBuilder.Entity<Vehicle>().Property(v => v.EmptyWeight).HasPrecision(18, 4);
+            modelBuilder.Entity<Vehicle>().Property(v => v.FuelTankCapacity).HasPrecision(18, 4);
+            modelBuilder.Entity<Vehicle>().Property(v => v.Weight).HasPrecision(18, 4);
+            modelBuilder.Entity<Vehicle>().Property(v => v.LoadingCapacity).HasPrecision(18, 4);
+            modelBuilder.Entity<haulages_bot.Models.Route>().Property(r => r.distance).HasPrecision(18, 4);
+            modelBuilder.Entity<haulages_bot.Models.Route>().Property(r => r.timeInHour).HasPrecision(18, 4);
+            modelBuilder.Entity<Haulage>().Property(h => h.Weight).HasPrecision(18, 4);
+            modelBuilder.Entity<Haulage>().Property(h => h.Kilometers).HasPrecision(18, 4);
+            modelBuilder.Entity<Historic>().Property(h => h.Weight).HasPrecision(18, 4);
+            modelBuilder.Entity<Employee>().Property(e => e.NoEmployee).HasPrecision(18, 0);
+            modelBuilder.Entity<ProductionPlanBotConfig>().Property(p => p.LawMinGrTon).HasPrecision(18, 4);
+            modelBuilder.Entity<ProductionPlanBotConfig>().Property(p => p.LawMaxGrTon).HasPrecision(18, 4);
+            modelBuilder.Entity<ProductionPlanBotConfig>().Property(p => p.LawMinPercent).HasPrecision(18, 4);
+            modelBuilder.Entity<ProductionPlanBotConfig>().Property(p => p.LawMaxPercent).HasPrecision(18, 4);
         }
 
         public class VehicleValidator : AbstractValidator<Vehicle>

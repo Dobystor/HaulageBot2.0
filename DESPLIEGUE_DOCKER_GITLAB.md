@@ -110,20 +110,24 @@ En el servidor (Linux), dentro de la carpeta del repo:
 ```bash
 # 1. Copiar la plantilla de variables y ajustarla
 cp .env.example .env
-nano .env        # ajusta HOST_PORT, AUTH_API_URL, secretos, etc.
+nano .env        # ajusta DB_SERVER, DB_NAME, DB_USER, DB_PASSWORD, HOST_PORT, etc.
 
 # 2. Construir y levantar el contenedor
 docker compose up -d --build
 
 # 3. Ver los logs
-docker compose logs -f haulage_bot
+docker compose logs -f haulages_bot
 
 # 4. Detener
 docker compose down
 ```
 
-La base de datos SQLite se guarda en un volumen Docker (`haulage_bot_data`),
-así que **no se pierde** al reconstruir el contenedor.
+El bot se conecta al **SQL Server** existente en el servidor (variables `DB_*` del `.env`)
+y crea/usa su propia base de datos `haulages_bot`. Las llaves de cifrado (Data Protection)
+se guardan en el volumen `haulage_bot_keys` para que no se regeneren en cada reinicio.
+
+> El healthcheck de Docker consulta `http://localhost:80/health`. Puedes verificar el estado con
+> `docker compose ps` (columna STATUS mostrará `healthy`).
 
 ---
 
@@ -132,16 +136,18 @@ así que **no se pierde** al reconstruir el contenedor.
 | Acción | Comando |
 |--------|---------|
 | Reconstruir tras cambios de código | `docker compose up -d --build` |
-| Ver logs en vivo | `docker compose logs -f haulage_bot` |
-| Reiniciar | `docker compose restart haulage_bot` |
+| Ver logs en vivo | `docker compose logs -f haulages_bot` |
+| Reiniciar | `docker compose restart haulages_bot` |
 | Detener y borrar contenedor | `docker compose down` |
 | Ver estado | `docker compose ps` |
-| Entrar al contenedor | `docker compose exec haulage_bot bash` |
+| Entrar al contenedor | `docker compose exec haulages_bot bash` |
 
 ---
 
 ## Notas
 
-- El puerto por defecto es **1254** (igual que el despliegue actual). Cámbialo en `.env` con `HOST_PORT`.
-- La configuración de SmartFlow (`AUTH_API_URL`, `AUTH_CLIENT_ID`, `AUTH_CLIENT_SECRET`) se ajusta en `.env`.
+- El puerto por defecto es **5101** (igual que el docker-compose del bot antiguo). Cámbialo en `.env` con `HOST_PORT`.
+- La base de datos es **SQL Server** (la instancia que ya existe en el servidor). Se configura con `DB_SERVER`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` en el `.env`.
+- La configuración de SmartFlow (`API_URL`, `CLIENT_ID`, `CLIENT_SECRET`) se ajusta en `.env`.
+- Las migraciones de Entity Framework se aplican solas al arrancar (crean las tablas si no existen).
 - El `Dockerfile` compila la app dentro del contenedor, así que no necesitas tener .NET instalado en el servidor, solo Docker.

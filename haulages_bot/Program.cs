@@ -1,11 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using haulages_bot.Data;
 using Hangfire;
-using Hangfire.Storage.SQLite;
+using Hangfire.SqlServer;
 using haulages_bot.Services;
 using haulages_bot.Hubs;
 using Newtonsoft.Json;
 using haulages_bot.Models;
+using Microsoft.AspNetCore.DataProtection;
 
 using System.Net.Http;
 using System.Net.Security;
@@ -13,9 +14,29 @@ using System.Net.Security;
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables();
 
+// ------------------------------------------------------------------
+// Mapeo de variables de entorno "planas" (estilo docker-compose antiguo)
+// hacia las claves jerárquicas que usa la app (Authentication:*).
+// Permite usar en el .env: ApiUrl, ClientId, ClientSecret, etc.
+// ------------------------------------------------------------------
+var flatToHierarchical = new Dictionary<string, string>
+{
+    ["ApiUrl"] = "Authentication:ApiUrl",
+    ["ClientId"] = "Authentication:ClientId",
+    ["ClientSecret"] = "Authentication:ClientSecret",
+    ["Username"] = "Authentication:Username",
+    ["Password"] = "Authentication:Password"
+};
+foreach (var map in flatToHierarchical)
+{
+    var value = Environment.GetEnvironmentVariable(map.Key);
+    if (!string.IsNullOrWhiteSpace(value))
+        builder.Configuration[map.Value] = value;
+}
+
 // Agregar servicios al contenedor.
 builder.Services.AddControllersWithViews();
-// Registrar HttpClient con bypass de verificación SSL para IPs industriales
+
 // Registrar HttpClient con bypass de verificación SSL para IPs industriales
 builder.Services.AddHttpClient(string.Empty).ConfigurePrimaryHttpMessageHandler(() => {
     var handler = new HttpClientHandler();
@@ -46,10 +67,23 @@ builder.Services.AddHostedService<ProductionPlanBotService>();
 // Habilitar SignalR para la comunicación en tiempo real.
 builder.Services.AddSignalR();
 
-// Agregar DbContext.
+// Persistir las llaves de Data Protection en disco (volumen Docker)
+// para que no se regeneren en cada reinicio del contenedor.
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo("/var/keys/"))
+    .SetApplicationName("HaulageBot");
+
+// ------------------------------------------------------------------
+// Cadena de conexión a SQL Server.
+// Se toma de la variable de entorno "DefaultConnection" (estilo antiguo)
+// o de ConnectionStrings:DefaultConnection como respaldo.
+// ------------------------------------------------------------------
+var connectionString = Environment.GetEnvironmentVariable("DefaultConnection")
+    ?? builder.Configuration.GetConnectionString("DefaultConnection");
+
 builder.Services.AddDbContext<dbboot>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
-Console.WriteLine($"DefaultConnection string: {builder.Configuration.GetConnectionString("DefaultConnection")}");
+    options.UseSqlServer(connectionString));
+Console.WriteLine($"DefaultConnection (SQL Server): {connectionString}");
 
 // Configuración de logging.
 builder.Logging.ClearProviders();
@@ -91,76 +125,6 @@ using (var serviceProvider = builder.Services.BuildServiceProvider())
             Console.WriteLine("Aplicando migraciones...");
             dbContext.Database.Migrate();
 
-            // Agregar columnas de snapshot si no existen (migración manual para SQLite)
-            try
-            {
-                dbContext.Database.ExecuteSqlRaw("ALTER TABLE Haulages ADD COLUMN VehicleEconomicNumber TEXT");
-            } catch { /* ya existe */ }
-            try
-            {
-                dbContext.Database.ExecuteSqlRaw("ALTER TABLE Haulages ADD COLUMN EmployeeFullName TEXT");
-            } catch { /* ya existe */ }
-            try
-            {
-                dbContext.Database.ExecuteSqlRaw("ALTER TABLE Haulages ADD COLUMN RouteDescription TEXT");
-            } catch { /* ya existe */ }
-
-            // Crear tabla RethinkBotConfigs si no existe
-            try
-            {
-                dbContext.Database.ExecuteSqlRaw(@"
-                    CREATE TABLE IF NOT EXISTS RethinkBotConfigs (
-                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        ServerConfigId INTEGER NOT NULL,
-                        RethinkHost TEXT NOT NULL DEFAULT '',
-                        RethinkPort INTEGER NOT NULL DEFAULT 28015,
-                        RethinkPassword TEXT NOT NULL DEFAULT '',
-                        IntervalSeconds INTEGER NOT NULL DEFAULT 30,
-                        MaxSimultaneousVehicles INTEGER NOT NULL DEFAULT 5,
-                        IsEnabled INTEGER NOT NULL DEFAULT 0
-                    )");
-            } catch { /* ya existe */ }
-            try
-            {
-                dbContext.Database.ExecuteSqlRaw("ALTER TABLE RethinkBotConfigs ADD COLUMN RethinkPassword TEXT NOT NULL DEFAULT ''");
-            } catch { /* ya existe */ }
-            try
-            {
-                dbContext.Database.ExecuteSqlRaw("ALTER TABLE RethinkBotConfigs ADD COLUMN ScooptramCount INTEGER NOT NULL DEFAULT 3");
-            } catch { /* ya existe */ }
-
-            // Crear tabla InventoryBotConfigs si no existe
-            try
-            {
-                dbContext.Database.ExecuteSqlRaw(@"
-                    CREATE TABLE IF NOT EXISTS InventoryBotConfigs (
-                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        ServerConfigId INTEGER NOT NULL,
-                        TonnageMin INTEGER NOT NULL DEFAULT 200,
-                        TonnageMax INTEGER NOT NULL DEFAULT 800,
-                        SitesMin INTEGER NOT NULL DEFAULT 2,
-                        SitesMax INTEGER NOT NULL DEFAULT 5,
-                        IsEnabled INTEGER NOT NULL DEFAULT 0
-                    )");
-            } catch { /* ya existe */ }
-
-            // Crear tabla ProductionPlanBotConfigs si no existe
-            try
-            {
-                dbContext.Database.ExecuteSqlRaw(@"
-                    CREATE TABLE IF NOT EXISTS ProductionPlanBotConfigs (
-                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        ServerConfigId INTEGER NOT NULL,
-                        TonnageMin INTEGER NOT NULL DEFAULT 3000,
-                        TonnageMax INTEGER NOT NULL DEFAULT 15000,
-                        LawMinGrTon REAL NOT NULL DEFAULT 50,
-                        LawMaxGrTon REAL NOT NULL DEFAULT 150,
-                        LawMinPercent REAL NOT NULL DEFAULT 0.5,
-                        LawMaxPercent REAL NOT NULL DEFAULT 5,
-                        IsEnabled INTEGER NOT NULL DEFAULT 0
-                    )");
-            } catch { /* ya existe */ }
-
             if (!dbContext.DataConfigurationLocal.Any())
             {
                 Console.WriteLine("Insertando datos iniciales...");
@@ -194,7 +158,15 @@ if (isDatabaseAvailable)
         config.SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
               .UseSimpleAssemblyNameTypeSerializer()
               .UseRecommendedSerializerSettings()
-              .UseSQLiteStorage(builder.Configuration.GetConnectionString("DefaultConnection"));
+              .UseSqlServerStorage(connectionString, new SqlServerStorageOptions
+              {
+                  CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
+                  SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
+                  QueuePollInterval = TimeSpan.Zero,
+                  UseRecommendedIsolationLevel = true,
+                  UsePageLocksOnDequeue = true,
+                  DisableGlobalLocks = true
+              });
     });
 
     builder.Services.AddHangfireServer();
@@ -227,6 +199,9 @@ app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Endpoint de healthcheck para Docker (docker-compose healthcheck -> /health)
+app.MapGet("/health", () => Results.Ok("Healthy"));
 
 if (isDatabaseAvailable)
 {

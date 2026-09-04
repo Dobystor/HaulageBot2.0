@@ -1,6 +1,7 @@
 # ============================================================
 # Dockerfile multi-stage para HaulageBot2.0
 # Compila y publica la app dentro del contenedor (autocontenido).
+# Se conecta a SQL Server externo (configurado por variables de entorno).
 # ============================================================
 
 # --- Etapa 1: build ---
@@ -22,10 +23,17 @@ WORKDIR /app
 # curl es necesario para el healthcheck y para que el RethinkBot ejecute peticiones ReQL
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
+# Directorio para las llaves de Data Protection (persistido por volumen)
+RUN mkdir -p /var/keys
+
 EXPOSE 80
 
 # La app escucha en el puerto 80 dentro del contenedor
 ENV ASPNETCORE_URLS=http://+:80
+
+# Healthcheck: la app expone /health
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=15s \
+  CMD curl -f http://localhost:80/health || exit 1
 
 COPY --from=build /app/publish .
 
